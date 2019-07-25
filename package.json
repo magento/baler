@@ -25,10 +25,14 @@
   },
   "homepage": "https://github.com/DrewML/m2-static-bundling#readme",
   "devDependencies": {
+    "@types/htmlparser2": "^3.10.1",
     "@types/node": "^12.6.8",
     "jest": "^24.8.0",
     "prettier": "^1.18.2",
     "ts-jest": "^24.0.2",
     "typescript": "^3.5.3"
+  },
+  "dependencies": {
+    "htmlparser2": "^3.10.1"
   }
 }
