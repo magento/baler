@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "inlineSourceMap": true,
+        "inlineSources": true,
+        "strict": true,
+        "target": "esnext",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "outDir": "dist",
+        "allowJs": true,
+        "noImplicitAny": true
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "src/__tests__"]
+}
