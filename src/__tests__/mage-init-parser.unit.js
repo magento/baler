@@ -1,6 +1,6 @@
 const { parse } = require('../mage-init-parser');
 
-test('single script in phtml with inline php values', () => {
+test('script in phtml with inline php values', () => {
     const input = `
     <?php /** @var \Dotdigitalgroup\Email\Block\Adminhtml\Dashboard $block */?>
     <div class="content-header">
@@ -48,7 +48,7 @@ test('data-mage-init in .phtml file', () => {
     });
 });
 
-test('single data-bind mageInit in .phtml file', () => {
+test('data-bind mageInit in .phtml file', () => {
     const input = `
         <div class="field-tooltip-content" data-target="dropdown" aria-hidden="true">
             <span class="field-tooltip-action action-help"
@@ -83,4 +83,39 @@ test('data-bind mageInit with multiple values in single attribute', () => {
             modalClass: 'opc-sidebar opc-summary-wrapper',
         },
     });
+});
+
+test('Malformed data-bind attr with mageInit throws a descriptive error', () => {
+    const input = `
+        <!-- purposely missing a comma in data-bind -->
+    <div id="opc-sidebar" data-bind="afterRender:setModalElement mageInit: {
+        'Magento_Ui/js/modal/modal':{
+            'type': 'custom',
+            'modalClass': 'opc-sidebar opc-summary-wrapper'
+        }
+    }">
+    `;
+
+    jest.spyOn(global.console, 'error').mockImplementation();
+
+    try {
+        parse(input);
+        throw new Error('Code should not be reached');
+    } catch (err) {
+        const [[firstLog], [secondLog]] = console.error.mock.calls;
+        expect(firstLog).toMatchInlineSnapshot(
+            `"Failed parsing value of a \\"data-bind\\" attribute while looking for the \\"mageInit\\" binding"`,
+        );
+        expect(secondLog).toMatchInlineSnapshot(`
+            "afterRender:setModalElement mageInit: {
+                    'Magento_Ui/js/modal/modal':{
+                        'type': 'custom',
+                        'modalClass': 'opc-sidebar opc-summary-wrapper'
+                    }
+                }"
+        `);
+        expect(err).toBeInstanceOf(Error);
+    } finally {
+        console.error.mockRestore();
+    }
 });

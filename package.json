@@ -25,7 +25,10 @@
   },
   "homepage": "https://github.com/DrewML/m2-static-bundling#readme",
   "devDependencies": {
+    "@types/acorn": "^4.0.5",
+    "@types/escodegen": "0.0.6",
     "@types/htmlparser2": "^3.10.1",
+    "@types/json5": "0.0.30",
     "@types/node": "^12.6.8",
     "jest": "^24.8.0",
     "prettier": "^1.18.2",
@@ -33,6 +36,9 @@
     "typescript": "^3.5.3"
   },
   "dependencies": {
-    "htmlparser2": "^3.10.1"
+    "acorn": "^6.2.1",
+    "escodegen": "^1.11.1",
+    "htmlparser2": "^3.10.1",
+    "json5": "^2.1.0"
   }
 }
