@@ -1,0 +1,1 @@
+src/**/*.{js,ts,html} docs/**/*.md *.js

@@ -1,20 +1,21 @@
 {
-  "name": "m2-static-bundling",
+  "name": "@magento/baler",
+  "private": true,
   "version": "0.0.1",
-  "description": "",
+  "description": "A proof of concept to see how feasible it is to do static analysis of all JavaScript dependencies hidden within Magento 2 templates (phtml/html)",
   "main": "dist/index.js",
   "bin": {
-    "magentobundle": "bin/magentobundle"
+    "baler": "bin/baler"
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test": "npm run format:check && jest -i",
     "format": "prettier --write $(head -1 prettier-globs)",
     "format:check": "prettier --list-different $(head -1 prettier-globs)"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DrewML/m2-static-bundling.git"
+    "url": "git+https://github.com/DrewML/baler.git"
   },
   "keywords": [
     "magento",
@@ -24,9 +25,9 @@
   "author": "Andrew Levine",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://github.com/DrewML/m2-static-bundling/issues"
+    "url": "https://github.com/DrewML/balerg/issues"
   },
-  "homepage": "https://github.com/DrewML/m2-static-bundling#readme",
+  "homepage": "https://github.com/DrewML/baler#readme",
   "devDependencies": {
     "@types/acorn": "^4.0.5",
     "@types/glob": "^7.1.1",
