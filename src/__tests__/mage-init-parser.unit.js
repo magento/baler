@@ -2,20 +2,21 @@ const { parse } = require('../mage-init-parser');
 
 test('script in phtml with inline php values', () => {
     const input = `
-    <?php /** @var \Dotdigitalgroup\Email\Block\Adminhtml\Dashboard $block */?>
-    <div class="content-header">
-        <?= $block->getChildHtml('adminhtml.system.config.switcher');?>
-    </div>
-    <script type="text/x-magento-init">
-        {
-            "*": {
-                "Dotdigitalgroup_Email/js/dashboard":{
-                    "contactLink":"<?= $block->escapeUrl($block->getContactSyncLink()); ?>",
-                    "importerLink":"<?= $block->escapeUrl($block->getImporterLink()); ?>"
+        <?php /** @var \Dotdigitalgroup\Email\Block\Adminhtml\Dashboard $block */?>
+        <div class="content-header">
+            <?= $block->getChildHtml('adminhtml.system.config.switcher');?>
+        </div>
+        <script type="text/x-magento-init">
+            {
+                "*": {
+                    "Dotdigitalgroup_Email/js/dashboard":{
+                        "contactLink":"<?= $block->escapeUrl($block->getContactSyncLink()); ?>",
+                        "importerLink":"<?= $block->escapeUrl($block->getImporterLink()); ?>"
+                    }
                 }
             }
-        }
-    </script>`;
+        </script>
+    `;
 
     const { deps, warnings } = parse(input);
     expect(deps).toEqual(['Dotdigitalgroup_Email/js/dashboard']);
@@ -24,15 +25,16 @@ test('script in phtml with inline php values', () => {
 
 test('data-mage-init in .phtml file', () => {
     const input = `
-    <?php /** @var \Amazon\Payment\Block\ProductPagePaymentLink $block */ ?>
-    <div class="amazon-button-container centered-button">
-        <div class="amazon-button-container__cell">
-            <div id="PayWithAmazon-<?= /* @noEscape */ $block->getJsId() ?>"
-                 class="login-with-amazon"
-                 data-mage-init='{"amazonButton": {"buttonType": "PwA"}}'>
+        <?php /** @var \Amazon\Payment\Block\ProductPagePaymentLink $block */ ?>
+        <div class="amazon-button-container centered-button">
+            <div class="amazon-button-container__cell">
+                <div id="PayWithAmazon-<?= /* @noEscape */ $block->getJsId() ?>"
+                    class="login-with-amazon"
+                    data-mage-init='{"amazonButton": {"buttonType": "PwA"}}'>
+                </div>
             </div>
-        </div>
-    </div>;`;
+        </div>;
+    `;
 
     const { deps, warnings } = parse(input);
     expect(deps).toEqual(['amazonButton']);
@@ -58,12 +60,12 @@ test('data-bind mageInit in .phtml file', () => {
 
 test('data-bind mageInit with multiple values in single attribute', () => {
     const input = `
-    <div id="opc-sidebar" data-bind="afterRender:setModalElement, mageInit: {
-        'Magento_Ui/js/modal/modal':{
-            'type': 'custom',
-            'modalClass': 'opc-sidebar opc-summary-wrapper'
-        }
-    }">
+        <div id="opc-sidebar" data-bind="afterRender:setModalElement, mageInit: {
+            'Magento_Ui/js/modal/modal':{
+                'type': 'custom',
+                'modalClass': 'opc-sidebar opc-summary-wrapper'
+            }
+        }">
     `;
 
     const { deps, warnings } = parse(input);
@@ -74,12 +76,12 @@ test('data-bind mageInit with multiple values in single attribute', () => {
 test('Malformed data-bind attr with mageInit reports a warning', () => {
     const input = `
         <!-- purposely missing a comma in data-bind -->
-    <div id="opc-sidebar" data-bind="afterRender:setModalElement mageInit: {
-        'Magento_Ui/js/modal/modal':{
-            'type': 'custom',
-            'modalClass': 'opc-sidebar opc-summary-wrapper'
-        }
-    }">
+        <div id="opc-sidebar" data-bind="afterRender:setModalElement mageInit: {
+            'Magento_Ui/js/modal/modal':{
+                'type': 'custom',
+                'modalClass': 'opc-sidebar opc-summary-wrapper'
+            }
+        }">
     `;
 
     const { deps, warnings } = parse(input);
@@ -89,13 +91,13 @@ test('Malformed data-bind attr with mageInit reports a warning', () => {
 
 test('Malformed open/close delimiters are fixed for attributes due to <?= ?> contents', () => {
     const input = `
-    <div class="field captcha no-label"
-        data-captcha="<?= $block->escapeHtmlAttr($block->getFormId()) ?>"
-        id="captcha-container-<?= $block->escapeHtmlAttr($block->getFormId()) ?>"
-        data-mage-init='{"captcha":{"url": "<?= $block->escapeUrl($block->getRefreshUrl()) ?>",
-                                "imageLoader": "<?= $block->escapeUrl($block->getViewFileUrl('images/loader-2.gif')) ?>",
-                                    "type": "<?= $block->escapeHtmlAttr($block->getFormId()) ?>"}}'>
-    </div>
+        <div class="field captcha no-label"
+            data-captcha="<?= $block->escapeHtmlAttr($block->getFormId()) ?>"
+            id="captcha-container-<?= $block->escapeHtmlAttr($block->getFormId()) ?>"
+            data-mage-init='{"captcha":{"url": "<?= $block->escapeUrl($block->getRefreshUrl()) ?>",
+                                    "imageLoader": "<?= $block->escapeUrl($block->getViewFileUrl('images/loader-2.gif')) ?>",
+                                        "type": "<?= $block->escapeHtmlAttr($block->getFormId()) ?>"}}'>
+        </div>
     `;
 
     const { deps, warnings } = parse(input);
