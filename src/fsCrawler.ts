@@ -3,12 +3,6 @@ import { promises as fs } from 'fs';
 import { promisify } from 'util';
 
 export async function fsCrawler(magentoRoot: string) {
-    if (!(await isMagentoRoot(magentoRoot))) {
-        throw new Error(
-            'Must be run from the root of a Magento 2 installation',
-        );
-    }
-
     const appDir = 'app/{code,design}/**/*.{phtml,html}';
     const vendor = 'vendor/**/*.{phtml,html}';
 
@@ -17,10 +11,4 @@ export async function fsCrawler(magentoRoot: string) {
     });
 
     return files;
-}
-
-async function isMagentoRoot(magentoRoot: string) {
-    const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
-    const entries = await fs.readdir(magentoRoot);
-    return EXPECTED_ENTRIES.every(e => entries.includes(e));
 }

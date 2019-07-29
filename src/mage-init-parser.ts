@@ -3,7 +3,7 @@ import * as acorn from 'acorn';
 
 type ParserResult = {
     deps: string[];
-    warnings: string[];
+    incompleteAnalysis: boolean;
 };
 
 /**
@@ -27,7 +27,7 @@ export function parse(input: string): ParserResult {
 
     return {
         deps: collector.deps,
-        warnings: collector.warnings,
+        incompleteAnalysis: collector.incompleteAnalysis,
     };
 }
 
@@ -37,13 +37,13 @@ export function parse(input: string): ParserResult {
  */
 class NodeCollector {
     deps: string[];
-    warnings: string[];
+    incompleteAnalysis: boolean;
     inScript: boolean;
     buffer: string;
 
     constructor() {
         this.deps = [];
-        this.warnings = [];
+        this.incompleteAnalysis = false;
         this.inScript = false;
         this.buffer = '';
     }
@@ -58,7 +58,7 @@ class NodeCollector {
                     ...extractDepsFromDataMageInitAttr(dataMageInit),
                 );
             } catch {
-                this.warnings.push(dataMageInit);
+                this.incompleteAnalysis = true;
             }
         }
 
@@ -66,7 +66,7 @@ class NodeCollector {
             try {
                 this.deps.push(...extractMageInitDepsFromDataBind(dataBind));
             } catch {
-                this.warnings.push(dataBind);
+                this.incompleteAnalysis = true;
             }
         }
 
@@ -82,13 +82,13 @@ class NodeCollector {
 
     onclosetag() {
         if (this.inScript) {
-            this.inScript = false;
             try {
                 this.deps.push(...extractDepsFromXMagentoInit(this.buffer));
             } catch {
-                this.warnings.push(this.buffer);
+                this.incompleteAnalysis = true;
             }
             this.buffer = '';
+            this.inScript = false;
         }
     }
 }
@@ -105,10 +105,8 @@ class NodeCollector {
  *          code that is now valid JavaScript, but not valid JSON
  */
 function extractMageInitDepsFromDataBind(attrValue: string): string[] {
-    const valueWrappedAsObjectLiteral = `({${attrValue}})`;
-    const ast = acorn.parse(valueWrappedAsObjectLiteral);
-    // @ts-ignore missing types for AST from acorn
-    const objExpression = ast.body[0].expression;
+    // Knockout bindings form an object literal without the outer wrapping braces
+    const objExpression = getASTFromObjectLiteral(`{${attrValue}}`);
     const mageInitProp = objExpression.properties.find(
         (p: any) => p.key.name === 'mageInit',
     );
@@ -127,12 +125,9 @@ function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
 }
 
 /**
- * @summary Replace PHP delimiters (and their contents)
- *          with placeholder values that will not break HTML parsing.
- *          In multiple places in Magento, an HTML attribute will
- *          be opened with a single quote, and then a single quote
- *          will be used within <?= ?> tags. This breaks proper HTML
- *          attribute parsing
+ * @summary Replace PHP delimiters (and their contents) with placeholder
+ *          values that will not break HTML parsing when the delimiters
+ *          are not wrapped as JS string literals
  */
 function replacePHPDelimiters(input: string) {
     return input.replace(/(<\?(?:=|php)[\s\S]+?\?>)/g, 'PHP_DELIM_PLACEHOLDER');
@@ -152,6 +147,7 @@ function extractDepsFromXMagentoInit(input: string): string[] {
 
 /**
  * @summary Get an ESTree AST from an object literal in source text.
+ * @see https://github.com/estree/estree
  */
 function getASTFromObjectLiteral(input: string) {
     // An opening brace in statement-position is parsed as
