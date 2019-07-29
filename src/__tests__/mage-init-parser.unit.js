@@ -18,9 +18,9 @@ test('script in phtml with inline php values', () => {
         </script>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['Dotdigitalgroup_Email/js/dashboard']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('data-mage-init in .phtml file', () => {
@@ -36,9 +36,9 @@ test('data-mage-init in .phtml file', () => {
         </div>;
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['amazonButton']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('data-bind mageInit in .phtml file', () => {
@@ -53,9 +53,9 @@ test('data-bind mageInit in .phtml file', () => {
         </div>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['dropdown']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('data-bind mageInit with multiple values in single attribute', () => {
@@ -68,9 +68,9 @@ test('data-bind mageInit with multiple values in single attribute', () => {
         }">
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['Magento_Ui/js/modal/modal']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('Malformed data-bind attr with mageInit reports a warning', () => {
@@ -84,9 +84,9 @@ test('Malformed data-bind attr with mageInit reports a warning', () => {
         }">
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toHaveLength(0);
-    expect(warnings).toHaveLength(1);
+    expect(incompleteAnalysis).toBe(true);
 });
 
 test('Malformed open/close delimiters are fixed for attributes due to <?= ?> contents', () => {
@@ -100,12 +100,12 @@ test('Malformed open/close delimiters are fixed for attributes due to <?= ?> con
         </div>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['captcha']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
-test('Works when value of keys in mageInit are function calls', () => {
+test('Works when value of keys in data-bind mageInit are function calls', () => {
     const input = `
         <form class="form" id="co-transparent-form" action="#" method="post" data-bind="mageInit: {
             'transparent':{
@@ -122,9 +122,21 @@ test('Works when value of keys in mageInit are function calls', () => {
         </form>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['transparent', 'validation']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
+});
+
+test('data-bind mageInit dependency keys can be unquoted strings', () => {
+    const input = `
+        <span class="cart-tax-total" data-bind="mageInit: {taxToggle: {itemTaxId : '#subtotal-item-tax-details'+$parents[2].item_id}}">
+            <span class="price" data-bind="text: getFormattedPrice(getRowDisplayPriceInclTax($parents[2]))"></span>
+        </span>
+    `;
+
+    const { deps, incompleteAnalysis } = parse(input);
+    expect(deps).toEqual(['taxToggle']);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('Script in .phtml with php delimiters/expressions in the selector field', () => {
@@ -140,9 +152,9 @@ test('Script in .phtml with php delimiters/expressions in the selector field', (
         </script>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['Magento_AuthorizenetAcceptjs/js/payment-form']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('Works when data-mage-init is not valid JSON', () => {
@@ -160,12 +172,12 @@ test('Works when data-mage-init is not valid JSON', () => {
         </div>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['Magento_Backend/js/media-uploader']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
-test('Reports deps and warnings when both are present in one input', () => {
+test('Reports deps and incomplete when both are present in one input', () => {
     const input = `
         <div class="search-global" data-mage-init='{"globalSearch": {}}'>
             <form action="#" id="form-search">
@@ -187,9 +199,9 @@ test('Reports deps and warnings when both are present in one input', () => {
         </div>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['globalSearch']);
-    expect(warnings).toHaveLength(1);
+    expect(incompleteAnalysis).toBe(true);
 });
 
 test('Multiple PHP delimiters in a mage-init on a single line', () => {
@@ -197,9 +209,9 @@ test('Multiple PHP delimiters in a mage-init on a single line', () => {
         <div class="block <?= /* @escapeNotVerified */ $class ?>" data-mage-init='{"relatedProducts":{"relatedCheckbox":".related.checkbox"}}' data-limit="<?= /* @escapeNotVerified */ $limit ?>" data-shuffle="<?= /* @escapeNotVerified */ $shuffle ?>">
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['relatedProducts']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('Can handle PHP delimiter(s) starting with <?php', () => {
@@ -220,12 +232,12 @@ test('Can handle PHP delimiter(s) starting with <?php', () => {
         </script>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual([
         'configurable',
         'Magento_ConfigurableProduct/js/catalog-add-to-cart',
     ]);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 // TODO: See if we can get this working without breaking other things
@@ -249,7 +261,7 @@ test.skip('Handles multi-line php if statement in x-magento-init', () => {
         </script>
     `;
 
-    const { deps, warnings } = parse(input);
+    const { deps, incompleteAnalysis } = parse(input);
     expect(deps).toEqual(['slide']);
-    expect(warnings).toHaveLength(0);
+    expect(incompleteAnalysis).toBe(false);
 });

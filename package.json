@@ -30,7 +30,6 @@
   "homepage": "https://github.com/DrewML/baler#readme",
   "devDependencies": {
     "@types/acorn": "^4.0.5",
-    "@types/glob": "^7.1.1",
     "@types/htmlparser2": "^3.10.1",
     "@types/node": "^12.6.8",
     "jest": "^24.8.0",
@@ -40,7 +39,7 @@
   },
   "dependencies": {
     "acorn": "^6.2.1",
-    "glob": "^7.1.4",
+    "fast-glob": "^3.0.4",
     "htmlparser2": "^3.10.1",
     "source-map-support": "^0.5.12"
   }

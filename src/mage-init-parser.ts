@@ -112,7 +112,7 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     );
 
     const deps = mageInitProp.value.properties.map((p: any) => {
-        return p.key.value;
+        return p.key.value || p.key.name;
     });
 
     return deps;
@@ -120,7 +120,7 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
 
 function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
     return getASTFromObjectLiteral(attrValue).properties.map(
-        (p: any) => p.key.value,
+        (p: any) => p.key.value || p.key.name,
     );
 }
 
