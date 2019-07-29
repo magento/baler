@@ -1,23 +1,34 @@
 import { Parser } from 'htmlparser2';
 import * as acorn from 'acorn';
-import { generate } from 'escodegen';
-import json5 from 'json5';
+
+type ParserResult = {
+    deps: string[];
+    warnings: string[];
+};
 
 /**
  * @summary Given contents from a .phtml or .html file from Magento,
- *          will return a normalized form of all the various
- *          ways to define mage-init directives
+ *          will return all JavaScript dependencies. Sources include:
+ *          - x-magento-init
+ *          - data-mage-init
+ *          - mageInit knockout directive
+ *          - require() call (TODO)
+ *          - define() call (TODO)
  * @see https://devdocs.magento.com/guides/v2.3/javascript-dev-guide/javascript/js_init.html
  */
-export function parse(input: string): string[] {
+export function parse(input: string): ParserResult {
     const collector = new NodeCollector();
     const parser = new Parser(collector, {
         lowerCaseTags: true,
         lowerCaseAttributeNames: true,
     });
-    parser.write(input);
+    const cleanedInput = replacePHPDelimiters(input);
+    parser.write(cleanedInput);
 
-    return collector.mageInits;
+    return {
+        deps: collector.deps,
+        warnings: collector.warnings,
+    };
 }
 
 /**
@@ -25,14 +36,14 @@ export function parse(input: string): string[] {
  *          and collects all forms of mage-init directives
  */
 class NodeCollector {
-    mageInits: string[];
-
+    deps: string[];
+    warnings: string[];
     inScript: boolean;
-
     buffer: string;
 
     constructor() {
-        this.mageInits = [];
+        this.deps = [];
+        this.warnings = [];
         this.inScript = false;
         this.buffer = '';
     }
@@ -42,12 +53,21 @@ class NodeCollector {
         const dataBind = attribs['data-bind'];
 
         if (dataMageInit) {
-            this.mageInits.push(JSON.parse(dataMageInit));
+            try {
+                this.deps.push(
+                    ...extractDepsFromDataMageInitAttr(dataMageInit),
+                );
+            } catch {
+                this.warnings.push(dataMageInit);
+            }
         }
 
         if (dataBind && dataBind.includes('mageInit')) {
-            const mageInit = extractMageInitKeyFromDataBind(dataBind);
-            this.mageInits.push(mageInit);
+            try {
+                this.deps.push(...extractMageInitDepsFromDataBind(dataBind));
+            } catch {
+                this.warnings.push(dataBind);
+            }
         }
 
         if (name === 'script' && attribs.type === 'text/x-magento-init') {
@@ -63,7 +83,11 @@ class NodeCollector {
     onclosetag() {
         if (this.inScript) {
             this.inScript = false;
-            this.mageInits.push(JSON.parse(this.buffer));
+            try {
+                this.deps.push(...extractDepsFromXMagentoInit(this.buffer));
+            } catch {
+                this.warnings.push(this.buffer);
+            }
             this.buffer = '';
         }
     }
@@ -80,22 +104,60 @@ class NodeCollector {
  *          stringify back to JavaScript, and use json5 to parse the
  *          code that is now valid JavaScript, but not valid JSON
  */
-function extractMageInitKeyFromDataBind(attrValue: string) {
-    try {
-        const valueWrappedAsObjectLiteral = `({${attrValue}})`;
-        const ast = acorn.parse(valueWrappedAsObjectLiteral);
-        // @ts-ignore missing types for AST from acorn
-        const objExpression = ast.body[0].expression;
-        objExpression.properties = objExpression.properties.filter(
-            (p: any) => p.key.name === 'mageInit',
-        );
+function extractMageInitDepsFromDataBind(attrValue: string): string[] {
+    const valueWrappedAsObjectLiteral = `({${attrValue}})`;
+    const ast = acorn.parse(valueWrappedAsObjectLiteral);
+    // @ts-ignore missing types for AST from acorn
+    const objExpression = ast.body[0].expression;
+    const mageInitProp = objExpression.properties.find(
+        (p: any) => p.key.name === 'mageInit',
+    );
 
-        return json5.parse(generate(objExpression)).mageInit;
-    } catch (err) {
-        console.error(
-            'Failed parsing value of a "data-bind" attribute while looking for the "mageInit" binding',
-        );
-        console.error(attrValue);
-        throw err;
+    const deps = mageInitProp.value.properties.map((p: any) => {
+        return p.key.value;
+    });
+
+    return deps;
+}
+
+function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
+    return getASTFromObjectLiteral(attrValue).properties.map(
+        (p: any) => p.key.value,
+    );
+}
+
+/**
+ * @summary Replace PHP delimiters (and their contents)
+ *          with placeholder values that will not break HTML parsing.
+ *          In multiple places in Magento, an HTML attribute will
+ *          be opened with a single quote, and then a single quote
+ *          will be used within <?= ?> tags. This breaks proper HTML
+ *          attribute parsing
+ */
+function replacePHPDelimiters(input: string) {
+    return input.replace(/(<\?(?:=|php)[\s\S]+?\?>)/g, 'PHP_DELIM_PLACEHOLDER');
+}
+
+function extractDepsFromXMagentoInit(input: string): string[] {
+    const objExpression = getASTFromObjectLiteral(input);
+    const deps: string[] = [];
+
+    for (const selector of objExpression.properties) {
+        const newDeps = selector.value.properties.map((p: any) => p.key.value);
+        deps.push(...newDeps);
     }
+
+    return deps;
+}
+
+/**
+ * @summary Get an ESTree AST from an object literal in source text.
+ */
+function getASTFromObjectLiteral(input: string) {
+    // An opening brace in statement-position is parsed as
+    // a block, so we force an expression by wrapping in parens
+    const valueWrappedAsObjectLiteral = `(${input})`;
+    const ast = acorn.parse(valueWrappedAsObjectLiteral);
+    // @ts-ignore missing types for AST from acorn
+    return ast.body[0].expression;
 }

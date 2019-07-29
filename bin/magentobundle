@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+
+require('source-map-support/register');
+
+const { analyze } = require('../dist');
+
+analyze(process.cwd())
+    .then(console.log)
+    .catch(console.error);
