@@ -1,4 +1,4 @@
-const { parse } = require('../mage-init-parser');
+const { parseTemplateDeps } = require('../parseTemplateDeps');
 
 test('script in phtml with inline php values', () => {
     const input = `
@@ -18,7 +18,7 @@ test('script in phtml with inline php values', () => {
         </script>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['Dotdigitalgroup_Email/js/dashboard']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -36,7 +36,7 @@ test('data-mage-init in .phtml file', () => {
         </div>;
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['amazonButton']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -53,7 +53,7 @@ test('data-bind mageInit in .phtml file', () => {
         </div>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['dropdown']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -68,7 +68,7 @@ test('data-bind mageInit with multiple values in single attribute', () => {
         }">
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['Magento_Ui/js/modal/modal']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -84,7 +84,7 @@ test('Malformed data-bind attr with mageInit reports a warning', () => {
         }">
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toHaveLength(0);
     expect(incompleteAnalysis).toBe(true);
 });
@@ -100,7 +100,7 @@ test('Malformed open/close delimiters are fixed for attributes due to <?= ?> con
         </div>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['captcha']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -122,7 +122,7 @@ test('Works when value of keys in data-bind mageInit are function calls', () => 
         </form>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['transparent', 'validation']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -134,7 +134,7 @@ test('data-bind mageInit dependency keys can be unquoted strings', () => {
         </span>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['taxToggle']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -152,7 +152,7 @@ test('Script in .phtml with php delimiters/expressions in the selector field', (
         </script>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['Magento_AuthorizenetAcceptjs/js/payment-form']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -172,7 +172,7 @@ test('Works when data-mage-init is not valid JSON', () => {
         </div>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['Magento_Backend/js/media-uploader']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -199,7 +199,7 @@ test('Reports deps and incomplete when both are present in one input', () => {
         </div>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['globalSearch']);
     expect(incompleteAnalysis).toBe(true);
 });
@@ -209,7 +209,7 @@ test('Multiple PHP delimiters in a mage-init on a single line', () => {
         <div class="block <?= /* @escapeNotVerified */ $class ?>" data-mage-init='{"relatedProducts":{"relatedCheckbox":".related.checkbox"}}' data-limit="<?= /* @escapeNotVerified */ $limit ?>" data-shuffle="<?= /* @escapeNotVerified */ $shuffle ?>">
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['relatedProducts']);
     expect(incompleteAnalysis).toBe(false);
 });
@@ -232,7 +232,7 @@ test('Can handle PHP delimiter(s) starting with <?php', () => {
         </script>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual([
         'configurable',
         'Magento_ConfigurableProduct/js/catalog-add-to-cart',
@@ -240,7 +240,34 @@ test('Can handle PHP delimiter(s) starting with <?php', () => {
     expect(incompleteAnalysis).toBe(false);
 });
 
-// TODO: See if we can get this working without breaking other things
+// Not even bothering for now - Magento's uiComponents are going
+// to be painful to support, but we'll have to do it at some point
+test.skip('Can extract uiComponent components', () => {
+    const input = `
+        <script type="text/x-magento-init">
+            {
+                "*": {
+                    "Magento_Ui/js/core/app": {
+                        "components": {
+                                "messages": {
+                                    "component": "Magento_Theme/js/view/messages"
+                                }
+                            }
+                        }
+                    }
+            }
+        </script>
+    `;
+
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
+    expect(deps).toBe([
+        'Magento_Ui/js/core/app',
+        'Magento_Theme/js/view/messages',
+    ]);
+    expect(incompleteAnalysis).toBe(false);
+});
+
+// TODO: Fix this bug, but fairly low priority
 test.skip('Handles multi-line php if statement in x-magento-init', () => {
     const input = `
         <script type="text/x-magento-init">
@@ -261,7 +288,7 @@ test.skip('Handles multi-line php if statement in x-magento-init', () => {
         </script>
     `;
 
-    const { deps, incompleteAnalysis } = parse(input);
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
     expect(deps).toEqual(['slide']);
     expect(incompleteAnalysis).toBe(false);
 });

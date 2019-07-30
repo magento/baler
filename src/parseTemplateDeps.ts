@@ -16,7 +16,7 @@ type ParserResult = {
  *          - define() call (TODO)
  * @see https://devdocs.magento.com/guides/v2.3/javascript-dev-guide/javascript/js_init.html
  */
-export function parse(input: string): ParserResult {
+export function parseTemplateDeps(input: string): ParserResult {
     const collector = new NodeCollector();
     const parser = new Parser(collector, {
         lowerCaseTags: true,
@@ -26,7 +26,8 @@ export function parse(input: string): ParserResult {
     parser.write(cleanedInput);
 
     return {
-        deps: collector.deps,
+        // kill duplicates
+        deps: Array.from(new Set(collector.deps)),
         incompleteAnalysis: collector.incompleteAnalysis,
     };
 }

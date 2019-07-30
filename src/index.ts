@@ -1,7 +1,7 @@
 import { fsCrawler } from './fsCrawler';
 import { join } from 'path';
 import { promises as fs } from 'fs';
-import { parse } from './mage-init-parser';
+import { parseTemplateDeps } from './parseTemplateDeps';
 
 export async function analyze(magentoRoot: string) {
     if (!(await isMagentoRoot(magentoRoot))) {
@@ -15,7 +15,7 @@ export async function analyze(magentoRoot: string) {
         files.map(async file => {
             const path = join(magentoRoot, file);
             const contents = await fs.readFile(path, 'utf8');
-            const results = parse(contents);
+            const results = parseTemplateDeps(contents);
 
             return [file, results] as [string, typeof results];
         }),

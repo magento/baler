@@ -5,22 +5,11 @@ import glob from 'fast-glob';
 export async function fsCrawler(magentoRoot: string) {
     const composerDirs = await composerComponentPaths(magentoRoot);
     const appDirs = 'app/{code,design}/**/*.{phtml,html}';
-    const vendor = `vendor/{${composerDirs.join(',')}}/**/*.{phtml,html}`;
+    const vendorDirs = `vendor/{${composerDirs.join(',')}}/**/*.{phtml,html}`;
 
-    const pendingAppFiles = glob(appDirs, {
+    return glob([appDirs, vendorDirs], {
         cwd: magentoRoot,
     });
-
-    const pendingVendorFiles = glob(vendor, {
-        cwd: magentoRoot,
-    });
-
-    const [appFiles, vendorFiles] = await Promise.all([
-        pendingAppFiles,
-        pendingVendorFiles,
-    ]);
-
-    return [...appFiles, ...vendorFiles];
 }
 
 /**
