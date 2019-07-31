@@ -1,5 +1,6 @@
 import { Parser } from 'htmlparser2';
 import * as acorn from 'acorn';
+import { ObjectExpression, Program } from 'estree';
 
 type ParserResult = {
     deps: string[];
@@ -109,20 +110,20 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     // Knockout bindings form an object literal without the outer wrapping braces
     const objExpression = getASTFromObjectLiteral(`{${attrValue}}`);
     const mageInitProp = objExpression.properties.find(
-        (p: any) => p.key.name === 'mageInit',
+        p => p.key.type === 'Identifier' && p.key.name === 'mageInit',
     );
 
-    const deps = mageInitProp.value.properties.map((p: any) => {
-        return p.key.value || p.key.name;
-    });
+    if (!mageInitProp) {
+        throw new Error('Could not locate "mageInit" property');
+    }
 
-    return deps;
+    const propValue = mageInitProp.value as ObjectExpression;
+    return getPropertyNamesFromObjExpression(propValue);
 }
 
 function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
-    return getASTFromObjectLiteral(attrValue).properties.map(
-        (p: any) => p.key.value || p.key.name,
-    );
+    const objExpression = getASTFromObjectLiteral(attrValue);
+    return getPropertyNamesFromObjExpression(objExpression);
 }
 
 /**
@@ -139,8 +140,8 @@ function extractDepsFromXMagentoInit(input: string): string[] {
     const deps: string[] = [];
 
     for (const selector of objExpression.properties) {
-        const newDeps = selector.value.properties.map((p: any) => p.key.value);
-        deps.push(...newDeps);
+        const propValue = selector.value as ObjectExpression;
+        deps.push(...getPropertyNamesFromObjExpression(propValue));
     }
 
     return deps;
@@ -154,7 +155,32 @@ function getASTFromObjectLiteral(input: string) {
     // An opening brace in statement-position is parsed as
     // a block, so we force an expression by wrapping in parens
     const valueWrappedAsObjectLiteral = `(${input})`;
-    const ast = acorn.parse(valueWrappedAsObjectLiteral);
-    // @ts-ignore missing types for AST from acorn
-    return ast.body[0].expression;
+    // Acorn types are incomplete, but ESTree types match
+    const ast = (acorn.parse(valueWrappedAsObjectLiteral) as any) as Program;
+    const [firstStatement] = ast.body;
+
+    if (
+        firstStatement.type === 'ExpressionStatement' &&
+        firstStatement.expression.type === 'ObjectExpression'
+    ) {
+        return firstStatement.expression;
+    }
+
+    throw new Error(
+        'Expected an ObjectExpression to be the first expression in input',
+    );
+}
+
+function getPropertyNamesFromObjExpression(node: ObjectExpression) {
+    const keys: string[] = [];
+    for (const { key } of node.properties) {
+        if (key.type === 'Literal' && typeof key.value === 'string') {
+            keys.push(key.value);
+        }
+
+        if (key.type === 'Identifier') {
+            keys.push(key.name);
+        }
+    }
+    return keys;
 }

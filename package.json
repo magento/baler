@@ -30,6 +30,7 @@
   "homepage": "https://github.com/DrewML/baler#readme",
   "devDependencies": {
     "@types/acorn": "^4.0.5",
+    "@types/estree": "0.0.39",
     "@types/htmlparser2": "^3.10.1",
     "@types/node": "^12.6.8",
     "jest": "^24.8.0",
