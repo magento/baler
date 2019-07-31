@@ -1,11 +1,7 @@
 import { Parser } from 'htmlparser2';
 import * as acorn from 'acorn';
 import { ObjectExpression, Program } from 'estree';
-
-type ParserResult = {
-    deps: string[];
-    incompleteAnalysis: boolean;
-};
+import { ParserResult } from './types';
 
 /**
  * @summary Given contents from a .phtml or .html file from Magento,
