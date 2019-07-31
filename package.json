@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "acorn": "^6.2.1",
+    "acorn-loose": "^6.1.0",
     "esquery": "^1.0.1",
     "fast-glob": "^3.0.4",
     "htmlparser2": "^3.10.1",

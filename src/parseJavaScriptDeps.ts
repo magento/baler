@@ -1,4 +1,5 @@
 import * as acorn from 'acorn';
+import * as acornLoose from 'acorn-loose';
 import { Program, SimpleCallExpression, ArrayExpression } from 'estree';
 import * as esquery from 'esquery';
 import { ParserResult } from './types';
@@ -8,9 +9,15 @@ import { ParserResult } from './types';
  *          declared dependencies. Supports:
  *          - AMD `define` calls with deps array
  *          - AMD `require` calls with deps array
+ * @param fromPHP If true, will use a loose parser that can better
+ *                handle PHP interpolations in the code
  */
-export function parseJavaScriptDeps(input: string): ParserResult {
-    const ast = (acorn.parse(input) as any) as Program;
+export function parseJavaScriptDeps(
+    input: string,
+    fromPHP?: boolean,
+): ParserResult {
+    const parse = (fromPHP ? acornLoose : acorn).parse;
+    const ast = (parse(input) as any) as Program;
     const defineData = getAMDDefineDeps(ast);
     const requireData = getAMDRequireDeps(ast);
 

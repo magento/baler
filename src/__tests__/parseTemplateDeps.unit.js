@@ -240,6 +240,60 @@ test('Can handle PHP delimiter(s) starting with <?php', () => {
     expect(incompleteAnalysis).toBe(false);
 });
 
+test('Synchronous require in script tag', () => {
+    const input = `
+        <script>
+            var uiRegistry = require('uiRegistry');
+        </script>
+    `;
+
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
+    expect(deps).toEqual(['uiRegistry']);
+    expect(incompleteAnalysis).toBe(false);
+});
+
+test('async require in script tag', () => {
+    const input = `
+        <script>
+            require(['uiRegistry'], function(uiRegistry) {});
+        </script>
+    `;
+
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
+    expect(deps).toEqual(['uiRegistry']);
+    expect(incompleteAnalysis).toBe(false);
+});
+
+test('Finds statically analyzable require deps when PHP interpolations create invalid JS', () => {
+    const input = `
+        <script>
+            require(['jquery', 'domReady!'], function($){
+                    switch (massAction) {
+                        <?php if ($block->getUseSelectAll()):?>
+                        case 'selectAll':
+                            return <?= /* @escapeNotVerified */ $block->getJsObjectName() ?>.selectAll();
+                            break;
+                        case 'unselectAll':
+                            return <?= /* @escapeNotVerified */ $block->getJsObjectName() ?>.unselectAll();
+                            break;
+                        <?php endif; ?>
+                        case 'selectVisible':
+                            return <?= /* @escapeNotVerified */ $block->getJsObjectName() ?>.selectVisible();
+                            break;
+                        case 'unselectVisible':
+                            return <?= /* @escapeNotVerified */ $block->getJsObjectName() ?>.unselectVisible();
+                            break;
+                    }
+                });
+            });
+        </script>
+    `;
+
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
+    expect(deps).toEqual(['jquery', 'domReady!']);
+    expect(incompleteAnalysis).toBe(false);
+});
+
 // Not even bothering for now - Magento's uiComponents are going
 // to be painful to support, but we'll have to do it at some point
 test.skip('Can extract uiComponent components', () => {
