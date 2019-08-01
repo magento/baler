@@ -1,5 +1,4 @@
-import * as acorn from 'acorn';
-import * as acornLoose from 'acorn-loose';
+import { parse } from './jsParser';
 import { Program, SimpleCallExpression, ArrayExpression } from 'estree';
 import * as esquery from 'esquery';
 import { ParserResult } from './types';
@@ -16,8 +15,7 @@ export function parseJavaScriptDeps(
     input: string,
     fromPHP?: boolean,
 ): ParserResult {
-    const parse = (fromPHP ? acornLoose : acorn).parse;
-    const ast = (parse(input) as any) as Program;
+    const ast = parse(input, { loose: !!fromPHP });
     const defineData = getAMDDefineDeps(ast);
     const requireData = getAMDRequireDeps(ast);
 

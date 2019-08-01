@@ -73,7 +73,7 @@ test('data-bind mageInit with multiple values in single attribute', () => {
     expect(incompleteAnalysis).toBe(false);
 });
 
-test('Malformed data-bind attr with mageInit reports a warning', () => {
+test('Malformed data-bind attr with mageInit still works', () => {
     const input = `
         <!-- purposely missing a comma in data-bind -->
         <div id="opc-sidebar" data-bind="afterRender:setModalElement mageInit: {
@@ -85,8 +85,8 @@ test('Malformed data-bind attr with mageInit reports a warning', () => {
     `;
 
     const { deps, incompleteAnalysis } = parseTemplateDeps(input);
-    expect(deps).toHaveLength(0);
-    expect(incompleteAnalysis).toBe(true);
+    expect(deps).toEqual(['Magento_Ui/js/modal/modal']);
+    expect(incompleteAnalysis).toBe(false);
 });
 
 test('Malformed open/close delimiters are fixed for attributes due to <?= ?> contents', () => {
@@ -294,6 +294,37 @@ test('Finds statically analyzable require deps when PHP interpolations create in
     expect(incompleteAnalysis).toBe(false);
 });
 
+test('Multiline php if statements and values php delimiters outside of strings', () => {
+    const input = `
+    <script type="text/x-magento-init">
+        {
+            "[data-gallery-role=gallery-placeholder]": {
+                "mage/gallery/gallery": {
+                    "mixins":["magnifier/magnify"],
+                    "thumbmargin": 30,
+                    "magnifierOpts": <?php /* @escapeNotVerified */ echo $block->getMagnifier(); ?>,
+                    "data": <?php /* @escapeNotVerified */ echo $block->getGalleryImagesJson(); ?>,
+                    "options": {
+                        "nav": "<?php /* @escapeNotVerified */ echo $block->getVar("gallery/nav"); ?>",
+                        <?php if (($block->getVar("gallery/loop"))): ?>
+                            "loop": <?php /* @escapeNotVerified */ echo $block->getVar("gallery/loop"); ?>,
+                        <?php endif; ?>
+                        <?php if (($block->getVar("gallery/keyboard"))): ?>
+                            "keyboard": <?php /* @escapeNotVerified */ echo $block->getVar("gallery/keyboard"); ?>,
+                        <?php endif; ?>
+                    },
+                    "breakpoints": <?php /* @escapeNotVerified */ echo $block->getBreakpoints(); ?>
+                }
+            }
+        }
+    </script>
+    `;
+
+    const { deps, incompleteAnalysis } = parseTemplateDeps(input);
+    expect(deps).toEqual(['mage/gallery/gallery']);
+    expect(incompleteAnalysis).toBe(false);
+});
+
 // Not even bothering for now - Magento's uiComponents are going
 // to be painful to support, but we'll have to do it at some point
 test.skip('Can extract uiComponent components', () => {
@@ -321,8 +352,7 @@ test.skip('Can extract uiComponent components', () => {
     expect(incompleteAnalysis).toBe(false);
 });
 
-// TODO: Fix this bug, but fairly low priority
-test.skip('Handles multi-line php if statement in x-magento-init', () => {
+test('Handles multi-line php if statement in x-magento-init', () => {
     const input = `
         <script type="text/x-magento-init">
             {

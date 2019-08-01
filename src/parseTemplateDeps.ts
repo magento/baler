@@ -1,7 +1,7 @@
 import { Parser } from 'htmlparser2';
-import * as acorn from 'acorn';
-import { ObjectExpression, Program } from 'estree';
+import { ObjectExpression } from 'estree';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
+import { parseObjectExpression } from './jsParser';
 import { ParserResult } from './types';
 
 /**
@@ -114,7 +114,7 @@ class NodeCollector {
 
 function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     // Knockout bindings form an object literal without the outer wrapping braces
-    const objExpression = getASTFromObjectLiteral(`{${attrValue}}`);
+    const objExpression = parseObjectExpression(`{${attrValue}}`);
     const mageInitProp = objExpression.properties.find(
         p => p.key.type === 'Identifier' && p.key.name === 'mageInit',
     );
@@ -128,7 +128,7 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
 }
 
 function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
-    const objExpression = getASTFromObjectLiteral(attrValue);
+    const objExpression = parseObjectExpression(attrValue);
     return getPropertyNamesFromObjExpression(objExpression);
 }
 
@@ -142,7 +142,7 @@ function replacePHPDelimiters(input: string) {
 }
 
 function extractDepsFromXMagentoInit(input: string): string[] {
-    const objExpression = getASTFromObjectLiteral(input);
+    const objExpression = parseObjectExpression(input);
     const deps: string[] = [];
 
     for (const selector of objExpression.properties) {
@@ -151,30 +151,6 @@ function extractDepsFromXMagentoInit(input: string): string[] {
     }
 
     return deps;
-}
-
-/**
- * @summary Get an ESTree AST from an object literal in source text.
- * @see https://github.com/estree/estree
- */
-function getASTFromObjectLiteral(input: string) {
-    // An opening brace in statement-position is parsed as
-    // a block, so we force an expression by wrapping in parens
-    const valueWrappedAsObjectLiteral = `(${input})`;
-    // Acorn types are incomplete, but ESTree types match
-    const ast = (acorn.parse(valueWrappedAsObjectLiteral) as any) as Program;
-    const [firstStatement] = ast.body;
-
-    if (
-        firstStatement.type === 'ExpressionStatement' &&
-        firstStatement.expression.type === 'ObjectExpression'
-    ) {
-        return firstStatement.expression;
-    }
-
-    throw new Error(
-        'Expected an ObjectExpression to be the first expression in input',
-    );
 }
 
 /**
