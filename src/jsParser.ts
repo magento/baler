@@ -10,9 +10,9 @@ import { Program, ObjectExpression } from 'estree';
 export function parse(input: string, opts?: { loose: boolean }) {
     const isLoose = opts && opts.loose;
     const parser = (isLoose ? acornLoose : acorn).parse;
-    const ast = (parser(input) as any) as Program;
-
-    return ast;
+    // Acorn types are poor, but the AST complies with the ESTree spec,
+    // so we explicitly type cast to the ESTree root AST type
+    return (parser(input) as any) as Program;
 }
 
 /**
@@ -26,7 +26,7 @@ export function parseObjectExpression(
 ): ObjectExpression {
     const hasOpeningBrace = /\s*\{/.test(input);
     // {} is a block in statement position, so we need to wrap
-    // in () to force an expression, if that hasn't
+    // in () to force an expression, if that hasn't been done
     const inputCleaned = hasOpeningBrace ? `(${input})` : input;
 
     try {
