@@ -1,4 +1,4 @@
-import { Parser } from 'htmlparser2';
+import { Parser as HTMLParser } from 'htmlparser2';
 import { ObjectExpression } from 'estree';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { parseObjectExpression } from './jsParser';
@@ -16,7 +16,7 @@ import { ParserResult } from './types';
  */
 export function parseTemplateDeps(input: string): ParserResult {
     const collector = new NodeCollector();
-    const parser = new Parser(collector, {
+    const parser = new HTMLParser(collector, {
         lowerCaseTags: true,
         lowerCaseAttributeNames: true,
     });
@@ -112,6 +112,12 @@ class NodeCollector {
     }
 }
 
+/**
+ * @summary Given the value of a Knockout template `data-bind`
+ *          attribute, will find the `mageInit` key if present,
+ *          and return a list of all dependencies
+ * @see https://knockoutjs.com/documentation/binding-syntax.html
+ */
 function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     // Knockout bindings form an object literal without the outer wrapping braces
     const objExpression = parseObjectExpression(`{${attrValue}}`);
@@ -127,6 +133,9 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     return getPropertyNamesFromObjExpression(propValue);
 }
 
+/**
+ * @summary Parses dependencies out of a `data-mage-init` attribute
+ */
 function extractDepsFromDataMageInitAttr(attrValue: string): string[] {
     const objExpression = parseObjectExpression(attrValue);
     return getPropertyNamesFromObjExpression(objExpression);
@@ -141,6 +150,13 @@ function replacePHPDelimiters(input: string) {
     return input.replace(/(<\?(?:=|php)[\s\S]+?\?>)/g, 'PHP_DELIM_PLACEHOLDER');
 }
 
+/**
+ * @summary Extract dependencies from the value of a script tag
+ *          that has type="text/x-magento-init". A x-magento-init
+ *          is required to be JSON-compliant _after_ render, but
+ *          will have PHP interpolations in places when pulled
+ *          directly from a .phtml file
+ */
 function extractDepsFromXMagentoInit(input: string): string[] {
     const objExpression = parseObjectExpression(input);
     const deps: string[] = [];

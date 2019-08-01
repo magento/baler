@@ -2,16 +2,12 @@ import * as acorn from 'acorn';
 import * as acornLoose from 'acorn-loose';
 import { Program, ObjectExpression } from 'estree';
 
-type Opts = {
-    loose: boolean;
-};
-
 /**
  * @summary Parse JavaScript into an ESTree AST. Can optionally
  *          use an error-tolerant loose parser, which is useful
  *          for JS intermingled with PHP
  */
-export function parse(input: string, opts?: Opts) {
+export function parse(input: string, opts?: { loose: boolean }) {
     const isLoose = opts && opts.loose;
     const parser = (isLoose ? acornLoose : acorn).parse;
     const ast = (parser(input) as any) as Program;
