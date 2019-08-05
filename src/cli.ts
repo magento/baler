@@ -30,6 +30,6 @@ export async function run(cwd: string) {
     console.log(`Preparing to bundle ${themesToBundle.length} themes:`);
     console.log(formattedThemesNames);
 
-    const results = await bundleThemes(cwd, frontend);
+    const results = await bundleThemes(cwd, themesToBundle);
     console.log(results);
 }

@@ -3,39 +3,55 @@ import { join } from 'path';
 import { promises as fs } from 'fs';
 import { parseTemplateDeps } from './parseTemplateDeps';
 import { Theme } from './types';
+import fromentries from 'fromentries';
+import { graphFromAMDEntry } from './graphFromAMDEntry';
+import { evaluateRequireConfig } from './evaluateRequireConfig';
+
+const BUNDLE_ENTRY = 'mage/bootstrap';
 
 /**
- * @summary Create bundles for a single deployed theme in pub/static
+ * @summary Create bundles for multiple deployed themes in pub/static.
  */
 export async function bundleThemes(magentoRoot: string, themes: Theme[]) {
-    const templateFiles = await collectTemplates(magentoRoot);
-    console.log(templateFiles.length);
+    // const templateFiles = await collectTemplates(magentoRoot);
+    // const templates = await parsePHTMLTemplates(magentoRoot, templateFiles);
+    const results = await Promise.all(
+        themes.map(t => deployTheme(magentoRoot, t)),
+    );
+
+    return results;
 }
 
-export async function analyze(magentoRoot: string) {
-    const files = await collectTemplates(magentoRoot);
-    const parseResults = await Promise.all(
-        files.map(async file => {
+async function deployTheme(magentoRoot: string, theme: Theme) {
+    // Note: All work only needs to be done against a single theme, and then
+    // copied to each locale. JS should not change between locales
+    const firstLocaleRoot = join(theme.pathFromStoreRoot, theme.locales[0]);
+    const requireConfigPath = join(
+        magentoRoot,
+        firstLocaleRoot,
+        'requirejs-config.js',
+    );
+    const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
+    const requireConfig = evaluateRequireConfig(rawRequireConfig);
+    const graph = await graphFromAMDEntry(
+        firstLocaleRoot,
+        BUNDLE_ENTRY,
+        requireConfig,
+    );
+}
+
+async function parsePHTMLTemplates(
+    magentoRoot: string,
+    templatePaths: string[],
+) {
+    const results = await Promise.all(
+        templatePaths.map(async file => {
             const path = join(magentoRoot, file);
             const contents = await fs.readFile(path, 'utf8');
             const results = parseTemplateDeps(contents);
-
             return [file, results] as [string, typeof results];
         }),
     );
 
-    const dependencies: Record<string, string[]> = {};
-    const incompleteAnalysis = [];
-
-    for (const [file, result] of parseResults) {
-        if (result.deps.length) {
-            dependencies[file] = result.deps;
-        }
-
-        if (result.incompleteAnalysis) {
-            incompleteAnalysis.push(file);
-        }
-    }
-
-    console.log(JSON.stringify({ dependencies, incompleteAnalysis }, null, 2));
+    return fromentries(results);
 }

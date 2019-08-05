@@ -43,6 +43,7 @@
     "acorn-loose": "^6.1.0",
     "esquery": "^1.0.1",
     "fast-glob": "^3.0.4",
+    "fromentries": "^1.1.0",
     "htmlparser2": "^3.10.1",
     "requirejs": "^2.3.6",
     "source-map-support": "^0.5.12"

@@ -65,11 +65,11 @@ export async function getDeployedThemes(magentoRoot: string) {
 
     const pendingFrontendThemes = Promise.all(
         frontendVendors.map(v =>
-            getThemesFromVendor(staticRoot, 'frontend', v),
+            getThemesForVendor(magentoRoot, 'frontend', v),
         ),
     );
     const pendingAdminThemes = Promise.all(
-        adminVendors.map(v => getThemesFromVendor(staticRoot, 'adminhtml', v)),
+        adminVendors.map(v => getThemesForVendor(magentoRoot, 'adminhtml', v)),
     );
 
     const [frontendThemes, adminThemes] = await Promise.all([
@@ -83,19 +83,42 @@ export async function getDeployedThemes(magentoRoot: string) {
     };
 }
 
-async function getThemesFromVendor(
-    staticRoot: string,
+async function getLocalesForDeployedTheme(
+    magentoRoot: string,
+    area: string,
+    vendor: string,
+    name: string,
+) {
+    const themeRoot = join(magentoRoot, 'pub', 'static', area, vendor, name);
+    const dirs = await safeReaddir(themeRoot);
+
+    // filter out any extra files/folders that aren't locales
+    const reLang = /^[a-z]{2}(?:_[a-z]{2})?$/i;
+    return dirs.filter(d => reLang.test(d));
+}
+
+async function getThemesForVendor(
+    magentoRoot: string,
     area: string,
     vendor: string,
 ): Promise<Theme[]> {
-    const vendorPath = join(staticRoot, area, vendor);
-    const themeNames = await safeReaddir(vendorPath);
+    const vendorPath = join('pub', 'static', area, vendor);
+    const themeNames = await safeReaddir(join(magentoRoot, vendorPath));
     // TODO: Filter non-theme dirs (example: hidden dot dirs)
-    return themeNames.map(name => ({
-        vendor,
-        name,
-        area,
-    }));
+    return Promise.all(
+        themeNames.map(async name => ({
+            vendor,
+            name,
+            area,
+            locales: await getLocalesForDeployedTheme(
+                magentoRoot,
+                area,
+                vendor,
+                name,
+            ),
+            pathFromStoreRoot: join(vendorPath, name),
+        })),
+    );
 }
 
 const safeReaddir = (path: string) =>

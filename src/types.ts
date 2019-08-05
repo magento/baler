@@ -2,6 +2,8 @@ export type Theme = {
     vendor: string;
     name: string;
     area: string;
+    locales: string[];
+    pathFromStoreRoot: string;
 };
 
 export type ParserResult = {
@@ -20,3 +22,11 @@ export type PHTMLDependency = Readonly<{
 }>;
 
 export type Dependency = AMDDependency | PHTMLDependency;
+
+export type MagentoRequireConfig = RequireConfig & {
+    config: {
+        mixins: {
+            [key: string]: Record<string, boolean>;
+        };
+    };
+};
