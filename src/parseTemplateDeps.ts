@@ -35,19 +35,11 @@ export function parseTemplateDeps(input: string): ParserResult {
  *          and collects all forms of mage-init directives
  */
 class NodeCollector {
-    deps: string[];
-    incompleteAnalysis: boolean;
-    inXMageInitScript: boolean;
-    inScript: boolean;
-    buffer: string;
-
-    constructor() {
-        this.deps = [];
-        this.incompleteAnalysis = false;
-        this.inXMageInitScript = false;
-        this.inScript = false;
-        this.buffer = '';
-    }
+    deps: string[] = [];
+    incompleteAnalysis: boolean = false;
+    inXMageInitScript: boolean = false;
+    inScript: boolean = false;
+    buffer: string = '';
 
     onopentag(name: string, attribs: Record<string, string>) {
         const dataMageInit = attribs['data-mage-init'];

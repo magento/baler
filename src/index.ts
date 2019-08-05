@@ -1,16 +1,19 @@
-import { fsCrawler } from './fsCrawler';
+import { collectTemplates } from './magentoFS';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { parseTemplateDeps } from './parseTemplateDeps';
+import { Theme } from './types';
+
+/**
+ * @summary Create bundles for a single deployed theme in pub/static
+ */
+export async function bundleThemes(magentoRoot: string, themes: Theme[]) {
+    const templateFiles = await collectTemplates(magentoRoot);
+    console.log(templateFiles.length);
+}
 
 export async function analyze(magentoRoot: string) {
-    if (!(await isMagentoRoot(magentoRoot))) {
-        throw new Error(
-            'Must be run from the root of a Magento 2 installation',
-        );
-    }
-
-    const files = await fsCrawler(magentoRoot);
+    const files = await collectTemplates(magentoRoot);
     const parseResults = await Promise.all(
         files.map(async file => {
             const path = join(magentoRoot, file);
@@ -35,14 +38,4 @@ export async function analyze(magentoRoot: string) {
     }
 
     console.log(JSON.stringify({ dependencies, incompleteAnalysis }, null, 2));
-}
-
-/**
- * @summary Hacky but functional validation that a directory is the
- *          root of a Magento 2 installation
- */
-async function isMagentoRoot(magentoRoot: string) {
-    const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
-    const entries = await fs.readdir(magentoRoot);
-    return EXPECTED_ENTRIES.every(e => entries.includes(e));
 }

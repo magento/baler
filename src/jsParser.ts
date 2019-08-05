@@ -24,7 +24,7 @@ export function parseObjectExpression(
     input: string,
     loose?: boolean,
 ): ObjectExpression {
-    const hasOpeningBrace = /\s*\{/.test(input);
+    const hasOpeningBrace = /^\s*\{/.test(input);
     // {} is a block in statement position, so we need to wrap
     // in () to force an expression, if that hasn't been done
     const inputCleaned = hasOpeningBrace ? `(${input})` : input;

@@ -1,3 +1,9 @@
+export type Theme = {
+    vendor: string;
+    name: string;
+    area: string;
+};
+
 export type ParserResult = {
     deps: string[];
     incompleteAnalysis: boolean;

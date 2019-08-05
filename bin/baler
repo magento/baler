@@ -2,8 +2,8 @@
 
 require('source-map-support/register');
 
-const { analyze } = require('../dist');
+const { run } = require('../dist/cli');
 
-analyze(process.cwd())
+run(process.cwd())
     .then(console.log)
     .catch(console.error);
