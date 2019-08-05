@@ -28,7 +28,7 @@ export function createRequireResolver(
     vm.runInNewContext(requirejs, sandbox);
     // @ts-ignore
     sandbox.require.config({ ...requireConfig, baseUrl: '' });
-    const nameToUrl = (sandbox as any).require.s.contexts._.nameToUrl as (
+    const toUrl = (sandbox as any).require.s.contexts._.require.toUrl as (
         name: string,
         ext?: string,
     ) => string;
@@ -36,13 +36,9 @@ export function createRequireResolver(
     const resolver = (id: string) => {
         const parts = parse(id);
         const knownExt = parts.ext === '.js' || parts.ext === '.html';
-        // Some of the crazyness below is to deal with module names
-        // that appear to include extensions, like jquery.mobile.custom
-        const rel: string = nameToUrl(
-            join(parts.dir, knownExt ? parts.name : parts.base),
-            knownExt ? parts.ext : '.js',
-        );
-        return join(baseDir, rel);
+        const rel: string = toUrl(id);
+        const joined = join(baseDir, rel);
+        return knownExt ? joined : `${joined}.js`;
     };
 
     return resolver;

@@ -34,6 +34,7 @@ async function deployTheme(magentoRoot: string, theme: Theme) {
     const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
     const requireConfig = evaluateRequireConfig(rawRequireConfig);
     const graph = await graphFromAMDEntry(
+        magentoRoot,
         firstLocaleRoot,
         BUNDLE_ENTRY,
         requireConfig,
