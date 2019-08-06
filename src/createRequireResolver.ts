@@ -1,45 +1,40 @@
 import vm from 'vm';
 import { readFileSync } from 'fs';
-import { parse, join } from 'path';
+import { join, dirname, extname } from 'path';
 
 // The whole point of this module is to piggy back on
 // RequireJS's path resolver so we don't have to reimplement
 // it. Unfortunately the lib is not CommonJS or ES module friendly,
 // so we have to use some hacks.
 
-// We're making an (admittedly large) assumption here that Require's
-// ID resolving logic hasn't changed between versions used across
-// various Magento releases
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 
-export type Resolver = (id: string) => string;
+export type Resolver = (id: string, parentModulePath?: string) => string;
 /**
  * @summary Create a file path resolver using the API exposed by RequireJS,
  *          taking into account paths/map/etc config
  */
-export function createRequireResolver(
-    requireConfig: RequireConfig,
-    baseDir: string,
-) {
-    const sandbox = {};
+export function createRequireResolver(requireConfig: RequireConfig) {
+    const sandbox: any = {};
     // RequireJS is targeted at browsers, so it doesn't
     // have a CommonJS version, and just sets a global.
     // This is a quick hack to get what we need off that global
     vm.runInNewContext(requirejs, sandbox);
-    // @ts-ignore
-    sandbox.require.config({ ...requireConfig, baseUrl: '' });
-    const toUrl = (sandbox as any).require.s.contexts._.require.toUrl as (
-        name: string,
-        ext?: string,
-    ) => string;
+    (sandbox.require as Require).config({ ...requireConfig, baseUrl: '' });
 
-    const resolver = (id: string) => {
-        const parts = parse(id);
-        const knownExt = parts.ext === '.js' || parts.ext === '.html';
-        const rel: string = toUrl(id);
-        const joined = join(baseDir, rel);
-        return knownExt ? joined : `${joined}.js`;
+    const toUrl: Require['toUrl'] = sandbox.require.s.contexts._.require.toUrl;
+
+    const resolver: Resolver = (id, parentModulePath) => {
+        if (parentModulePath && id[0] === '.') {
+            const parentDir = dirname(parentModulePath);
+            const resolvedPath = join(parentDir, id);
+            return fixExt(toUrl(resolvedPath));
+        }
+
+        return fixExt(toUrl(id));
     };
 
     return resolver;
 }
+
+const fixExt = (path: string) => (extname(path) ? path : `${path}.js`);
