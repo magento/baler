@@ -40,8 +40,13 @@ test('Does not blow up when encountering an anonymous module without a deps []',
     expect(incompleteAnalysis).toBe(false);
 });
 
-test('Parses synchronous require', () => {
-    const input = 'require("foo")';
+test('Parses synchronous require inside define wrapper', () => {
+    const input = `
+        define([], function() {
+            var foo = require("foo");
+            return foo;
+        })
+    `;
     const { deps, incompleteAnalysis } = parseJavaScriptDeps(input);
     expect(deps).toEqual(['foo']);
     expect(incompleteAnalysis).toBe(false);

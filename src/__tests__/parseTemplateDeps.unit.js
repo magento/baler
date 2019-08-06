@@ -240,10 +240,13 @@ test('Can handle PHP delimiter(s) starting with <?php', () => {
     expect(incompleteAnalysis).toBe(false);
 });
 
-test('Synchronous require in script tag', () => {
+test('Synchronous require inside define wrapper in script tag', () => {
     const input = `
         <script>
-            var uiRegistry = require('uiRegistry');
+            define([], function() {
+                var uiRegistry = require('uiRegistry');
+                return uiRegistry;
+            });
         </script>
     `;
 
