@@ -32,6 +32,7 @@ export function parseJavaScriptDeps(
             ...syncRequireData.deps,
         ]),
     );
+
     const incompleteAnalysis =
         defineData.incompleteAnalysis ||
         asyncRequireData.incompleteAnalysis ||

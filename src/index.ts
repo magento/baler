@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import { parseTemplateDeps } from './parseTemplateDeps';
 import { Theme } from './types';
 import fromentries from 'fromentries';
-import { graphFromAMDEntry } from './graphFromAMDEntry';
+import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluateRequireConfig } from './evaluateRequireConfig';
 
 const BUNDLE_ENTRY = 'mage/bootstrap';
@@ -33,12 +33,12 @@ async function deployTheme(magentoRoot: string, theme: Theme) {
     );
     const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
     const requireConfig = evaluateRequireConfig(rawRequireConfig);
-    const graph = await graphFromAMDEntry(
-        magentoRoot,
-        firstLocaleRoot,
+    const graph = await traceAMDDependencies(
         BUNDLE_ENTRY,
         requireConfig,
+        firstLocaleRoot,
     );
+    console.log(JSON.stringify(graph, null, 2));
 }
 
 async function parsePHTMLTemplates(
