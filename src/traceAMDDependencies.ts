@@ -7,55 +7,44 @@ import { createRequireResolver } from './createRequireResolver';
 type AMDGraph = Record<string, string[]>;
 
 export async function traceAMDDependencies(
-    moduleID: string,
+    entryModuleID: string,
     requireConfig: MagentoRequireConfig,
     baseDir: string,
 ): Promise<AMDGraph> {
     const resolver = createRequireResolver(requireConfig);
-    const resolvedID = resolver(moduleID);
-    const toVisit: Set<string> = new Set([resolvedID]);
-    const parents: Map<string, string> = new Map();
+    const toVisit: Set<string> = new Set();
+    const reads: Map<string, Promise<string>> = new Map();
     const graph: AMDGraph = {};
 
-    while (toVisit.size) {
-        const [next] = toVisit;
-        toVisit.delete(next);
-        const parentPath = parents.get(next);
+    const addDep = (dep: string) => {
+        toVisit.add(dep);
+        // the while loop processes things serially,
+        // but we kick off file reads as soon as possible
+        // so the file is ready when it's time to process
+        const pendingRead = fs.readFile(join(baseDir, dep), 'utf8');
+        reads.set(dep, pendingRead);
+    };
 
-        const source = await readAMDModule(next, baseDir, parentPath);
+    // Manually add the entry point
+    addDep(resolver(entryModuleID));
+
+    // Breadth-first search of the graph
+    while (toVisit.size) {
+        const [resolvedID] = toVisit;
+        toVisit.delete(resolvedID);
+
+        const source = (await reads.get(resolvedID)) as string;
         const { deps } = parseJavaScriptDeps(source);
-        graph[next] = [];
+        graph[resolvedID] = [];
 
         deps.forEach(dep => {
-            const resolvedID = resolver(dep, next);
-            graph[next].push(resolvedID);
-            if (!graph.hasOwnProperty(resolvedID)) {
-                toVisit.add(resolvedID);
-                parents.set(resolvedID, next);
+            const resolvedDepID = resolver(dep, resolvedID);
+            graph[resolvedID].push(resolvedDepID);
+            if (!graph.hasOwnProperty(resolvedDepID)) {
+                addDep(resolvedDepID);
             }
         });
     }
 
     return graph;
-}
-
-async function readAMDModule(
-    moduleID: string,
-    baseDir: string,
-    parentPath?: string,
-) {
-    const path = join(baseDir, moduleID);
-    try {
-        const result = await fs.readFile(path, 'utf8');
-        return result;
-    } catch {
-        const strBuilder = [
-            'Could not find required dependency',
-            `  ID: ${moduleID}`,
-            parentPath && `  Required By: ${parentPath}`,
-            `  Expected path: ${path}`,
-        ];
-
-        throw new Error(strBuilder.join('\n'));
-    }
 }
