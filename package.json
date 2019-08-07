@@ -13,6 +13,9 @@
     "format": "prettier --write $(head -1 prettier-globs)",
     "format:check": "prettier --list-different $(head -1 prettier-globs)"
   },
+  "engines": {
+    "node": ">=10.12.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/DrewML/baler.git"
@@ -30,6 +33,7 @@
   "homepage": "https://github.com/DrewML/baler#readme",
   "devDependencies": {
     "@types/acorn": "^4.0.5",
+    "@types/console-log-level": "^1.4.0",
     "@types/estree": "0.0.39",
     "@types/htmlparser2": "^3.10.1",
     "@types/node": "^12.6.8",
@@ -41,6 +45,7 @@
   "dependencies": {
     "acorn": "^6.2.1",
     "acorn-loose": "^6.1.0",
+    "console-log-level": "^1.4.1",
     "esquery": "^1.0.1",
     "fast-glob": "^3.0.4",
     "fromentries": "^1.1.0",

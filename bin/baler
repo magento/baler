@@ -1,9 +1,22 @@
 #!/usr/bin/env node
 
+const [major, minor] = process.version
+    .split('v')[1]
+    .split('.')
+    .map(Number);
+if (major < 10 || (major === 10 && minor < 12)) {
+    console.error(
+        `baler requires a version of node.js >= 10.12.0. You're currently using ${process.version}`,
+    );
+    process.exit(1);
+}
+
+// Enable source-map support to ensure stack traces provided in bug reports
+// reference the TypeScript src, not compiled JS
 require('source-map-support/register');
 
-const { run } = require('../dist/cli');
-
-run(process.cwd())
+process.env.BALER_LOG_LEVEL = process.env.BALER_LOG_LEVEL || 'info';
+require('../dist/cli')
+    .run(process.cwd())
     .then(console.log)
     .catch(console.error);

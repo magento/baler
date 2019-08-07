@@ -1,3 +1,4 @@
+import { log } from './log';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { MagentoRequireConfig } from './types';
@@ -27,11 +28,13 @@ export async function traceAMDDependencies(
 
     // Manually add the entry point
     addDep(resolver(entryModuleID));
+    log.debug(`Begin tracing AMD dependencies, starting with ${entryModuleID}`);
 
     // Breadth-first search of the graph
     while (toVisit.size) {
         const [resolvedID] = toVisit;
         toVisit.delete(resolvedID);
+        log.debug(`Tracing dependencies for "${resolvedID}"`);
 
         const source = (await reads.get(resolvedID)) as string;
         const { deps } = parseJavaScriptDeps(source);
@@ -40,6 +43,7 @@ export async function traceAMDDependencies(
         deps.forEach(dep => {
             const resolvedDepID = resolver(dep, resolvedID);
             graph[resolvedID].push(resolvedDepID);
+            log.debug(`Found dependency "${resolvedDepID}" in ${resolvedID}`);
             if (!graph.hasOwnProperty(resolvedDepID)) {
                 addDep(resolvedDepID);
             }
