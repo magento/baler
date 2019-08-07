@@ -7,6 +7,10 @@ import { createRequireResolver } from './createRequireResolver';
 
 type AMDGraph = Record<string, string[]>;
 
+/**
+ * @summary Build a dependency graph of AMD modules, starting
+ *          from a single entry module
+ */
 export async function traceAMDDependencies(
     entryModuleID: string,
     requireConfig: MagentoRequireConfig,
@@ -22,7 +26,9 @@ export async function traceAMDDependencies(
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
-        const pendingRead = fs.readFile(join(baseDir, dep), 'utf8');
+        const pendingRead = quietAsyncRejectionWarning(
+            fs.readFile(join(baseDir, dep), 'utf8'),
+        );
         reads.set(dep, pendingRead);
     };
 
@@ -51,4 +57,17 @@ export async function traceAMDDependencies(
     }
 
     return graph;
+}
+
+/**
+ * @summary Unfortunately a decision was made in node.js core
+ *          to spit warnings to stdout whenever a rejection
+ *          handler has not been added synchronously to a promise,
+ *          which is a pain when you're saving promises to be unwrapped.
+ *          This opts-in to stopping those warnings on a per-promise basis
+ * @see https://github.com/rsp/node-caught
+ */
+function quietAsyncRejectionWarning<T>(promise: Promise<T>) {
+    promise.catch(() => {});
+    return promise;
 }

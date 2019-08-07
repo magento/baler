@@ -1,5 +1,6 @@
 import vm from 'vm';
 import { log } from './log';
+import { MagentoRequireConfig } from './types';
 import { readFileSync } from 'fs';
 import { join, dirname, extname } from 'path';
 
@@ -10,12 +11,12 @@ import { join, dirname, extname } from 'path';
 
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 
-export type Resolver = (id: string, parentModulePath?: string) => string;
+export type Resolver = (id: string, issuingModule?: string) => string;
 /**
  * @summary Create a file path resolver using the API exposed by RequireJS,
  *          taking into account paths/map/etc config
  */
-export function createRequireResolver(requireConfig: RequireConfig) {
+export function createRequireResolver(requireConfig: MagentoRequireConfig) {
     log.debug(`Creating RequireJS resolver`);
     const sandbox: any = {};
     // RequireJS is targeted at browsers, so it doesn't
@@ -26,10 +27,10 @@ export function createRequireResolver(requireConfig: RequireConfig) {
 
     const toUrl: Require['toUrl'] = sandbox.require.s.contexts._.require.toUrl;
 
-    const resolver: Resolver = (id, parentModulePath) => {
-        log.debug(`Resolving dependency "${id}" from "${parentModulePath}"`);
-        if (parentModulePath && id[0] === '.') {
-            const parentDir = dirname(parentModulePath);
+    const resolver: Resolver = (id, issuingModule) => {
+        log.debug(`Resolving dependency "${id}" from "${issuingModule}"`);
+        if (issuingModule && id[0] === '.') {
+            const parentDir = dirname(issuingModule);
             const resolvedPath = join(parentDir, id);
             return fixExt(toUrl(resolvedPath));
         }

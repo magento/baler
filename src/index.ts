@@ -33,7 +33,7 @@ async function bundleTheme(magentoRoot: string, theme: Theme) {
     // copied to each locale. JS should not change between locales
     const [firstLocale] = theme.locales;
     log.debug(
-        `Begin bundling theme "${theme.vendor}/${theme.name}", using locale "${firstLocale}"`,
+        `Begin bundling theme "${theme.vendor}/${theme.name}", using locale "${firstLocale}" as the source`,
     );
     const firstLocaleRoot = join(theme.pathFromStoreRoot, firstLocale);
     const requireConfigPath = join(
