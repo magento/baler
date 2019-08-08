@@ -12,8 +12,8 @@ export type ParserResult = {
 };
 
 export type MagentoRequireConfig = RequireConfig & {
-    config: {
-        mixins: {
+    config?: {
+        mixins?: {
             [key: string]: Record<string, boolean>;
         };
     };
