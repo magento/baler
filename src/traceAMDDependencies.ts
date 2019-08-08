@@ -1,8 +1,7 @@
 import { log } from './log';
-import { join } from 'path';
 import { promises as fs } from 'fs';
 import { wrapP } from './wrapP';
-import { moduleIDToPath } from './moduleIDToPath';
+import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
 import { parseModuleID } from './parseModuleID';
 import { MagentoRequireConfig } from './types';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
@@ -13,8 +12,9 @@ type CacheEntry = {
     read: Promise<string>;
     path: string;
     id: string;
-    plugin: string;
 };
+
+const BUILT_IN_DEPS = ['exports', 'require', 'module'];
 
 /**
  * @summary Build a dependency graph of AMD modules, starting
@@ -31,22 +31,25 @@ export async function traceAMDDependencies(
     const moduleCache: Map<string, CacheEntry> = new Map();
     const graph: AMDGraph = {};
 
-    const addDep = (dep: string) => {
-        toVisit.add(dep);
-        const { id, plugin } = parseModuleID(dep);
-        const path = moduleIDToPath({ id, plugin });
+    const addDepToVisitList = (resolvedDepID: string) => {
+        if (graph.hasOwnProperty(resolvedDepID)) return;
+
+        toVisit.add(resolvedDepID);
+        const path = resolvedModuleIDToPath(resolvedDepID, baseDir);
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
-        const read = quietAsyncRejectionWarning(
-            fs.readFile(join(baseDir, path), 'utf8'),
-        );
-        moduleCache.set(dep, { read, path, id, plugin });
+        const read = quietAsyncRejectionWarning(fs.readFile(path, 'utf8'));
+        moduleCache.set(resolvedDepID, {
+            read,
+            path,
+            id: resolvedDepID,
+        });
     };
 
     log.debug(`Begin tracing AMD dependencies`);
     // Manually add the entry point
-    addDep(resolver(entryModuleID));
+    addDepToVisitList(entryModuleID);
 
     // Breadth-first search of the graph
     while (toVisit.size) {
@@ -54,11 +57,11 @@ export async function traceAMDDependencies(
         toVisit.delete(resolvedID);
         log.debug(`Tracing dependencies for "${resolvedID}"`);
 
-        const { read, path, id, plugin } = moduleCache.get(
-            resolvedID,
-        ) as CacheEntry;
+        const { read } = moduleCache.get(resolvedID) as CacheEntry;
         const [err, source] = await wrapP(read);
-        if (err) throw decorateReadErrorMessage(resolvedID, err);
+        if (err) {
+            throw decorateReadErrorMessage(resolvedID, err);
+        }
 
         const { deps } = parseJavaScriptDeps(source as string);
         if (deps.length) {
@@ -67,10 +70,26 @@ export async function traceAMDDependencies(
         graph[resolvedID] = [];
 
         deps.forEach(dep => {
-            const resolvedDepID = resolver(dep, resolvedID);
-            graph[resolvedID].push(resolvedDepID);
-            if (!graph.hasOwnProperty(resolvedDepID)) {
-                addDep(resolvedDepID);
+            if (BUILT_IN_DEPS.includes(dep)) {
+                // We want data about built-in dependencies in the graph,
+                // but we don't want to try to read them from disk, since
+                // they come from the require runtime
+                graph[resolvedID].push(dep);
+                return;
+            }
+
+            const { id, plugin } = parseModuleID(dep);
+
+            if (id) {
+                const resolvedDepID = resolver(id, resolvedID);
+                graph[resolvedID].push(resolvedDepID);
+                addDepToVisitList(resolvedDepID);
+            }
+
+            if (plugin) {
+                const resolvedPluginID = resolver(plugin);
+                graph[resolvedID].push(resolvedPluginID);
+                addDepToVisitList(resolvedPluginID);
             }
         });
     }

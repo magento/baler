@@ -9,8 +9,8 @@ test('text plugin', () => {
 });
 
 test('domReady plugin', () => {
-    expect(parseModuleID('domReady!foo')).toEqual({
-        id: 'foo',
+    expect(parseModuleID('domReady!')).toEqual({
+        id: '',
         plugin: 'domReady',
     });
 });
