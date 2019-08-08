@@ -1,4 +1,5 @@
 import { log } from './log';
+import { extname } from 'path';
 import { promises as fs } from 'fs';
 import { wrapP } from './wrapP';
 import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
@@ -11,7 +12,6 @@ type AMDGraph = Record<string, string[]>;
 type CacheEntry = {
     read: Promise<string>;
     path: string;
-    id: string;
 };
 
 const BUILT_IN_DEPS = ['exports', 'require', 'module'];
@@ -33,9 +33,16 @@ export async function traceAMDDependencies(
 
     const addDepToVisitList = (resolvedDepID: string) => {
         if (graph.hasOwnProperty(resolvedDepID)) return;
+        graph[resolvedDepID] = [];
+
+        const path = resolvedModuleIDToPath(resolvedDepID, baseDir);
+        // We're only tracing AMD dependencies. Since a non-JS file
+        // can't have dependencies, we can skip the read and parse
+        if (extname(path) !== '.js') {
+            return;
+        }
 
         toVisit.add(resolvedDepID);
-        const path = resolvedModuleIDToPath(resolvedDepID, baseDir);
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
@@ -43,7 +50,6 @@ export async function traceAMDDependencies(
         moduleCache.set(resolvedDepID, {
             read,
             path,
-            id: resolvedDepID,
         });
     };
 
@@ -67,7 +73,6 @@ export async function traceAMDDependencies(
         if (deps.length) {
             log.debug(`Found dependency request for: ${deps.join(', ')}`);
         }
-        graph[resolvedID] = [];
 
         deps.forEach(dep => {
             if (BUILT_IN_DEPS.includes(dep)) {
