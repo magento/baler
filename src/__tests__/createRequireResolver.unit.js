@@ -10,7 +10,7 @@ test('Resolves a bare module identifier without a path mapped from map["*"]', ()
     };
     const resolver = createRequireResolver(requireConfig);
     const result = resolver('ko');
-    expect(result).toBe('knockoutjs/knockout.js');
+    expect(result).toBe('knockoutjs/knockout');
 });
 
 test('Resolves a path off of a map["*"] mapped value', () => {
@@ -23,7 +23,7 @@ test('Resolves a path off of a map["*"] mapped value', () => {
     };
     const resolver = createRequireResolver(requireConfig);
     const result = resolver('ko/foo');
-    expect(result).toBe('knockoutjs/knockout/foo.js');
+    expect(result).toBe('knockoutjs/knockout/foo');
 });
 
 test('Handles relative paths when a parent module is provided', () => {
@@ -37,7 +37,7 @@ test('Handles relative paths when a parent module is provided', () => {
     const resolver = createRequireResolver(requireConfig);
     const knockoutPath = resolver('ko');
     const result = resolver('./bindings', knockoutPath);
-    expect(result).toBe('knockoutjs/bindings.js');
+    expect(result).toBe('knockoutjs/bindings');
 });
 
 test('Handles traversing upwards when parent is provided', () => {
@@ -46,7 +46,7 @@ test('Handles traversing upwards when parent is provided', () => {
         'Magento_Ui/js/lib/knockout/bindings/after-render',
     );
     const result = resolver('../template/renderers', parentPath);
-    expect(result).toBe('Magento_Ui/js/lib/knockout/template/renderers.js');
+    expect(result).toBe('Magento_Ui/js/lib/knockout/template/renderers');
 });
 
 test('paths config works for bare module identifier', () => {
@@ -57,5 +57,5 @@ test('paths config works for bare module identifier', () => {
     };
     const resolver = createRequireResolver(requireConfig);
     const result = resolver('jquery/ui');
-    expect(result).toBe('jquery/jquery-ui.js');
+    expect(result).toBe('jquery/jquery-ui');
 });

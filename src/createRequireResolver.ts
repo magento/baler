@@ -2,7 +2,7 @@ import vm from 'vm';
 import { log } from './log';
 import { MagentoRequireConfig } from './types';
 import { readFileSync } from 'fs';
-import { join, dirname, extname } from 'path';
+import { join, dirname } from 'path';
 
 // The whole point of this module is to piggy back on
 // RequireJS's path resolver so we don't have to reimplement
@@ -32,13 +32,11 @@ export function createRequireResolver(requireConfig: MagentoRequireConfig) {
         if (issuingModule && id[0] === '.') {
             const parentDir = dirname(issuingModule);
             const resolvedPath = join(parentDir, id);
-            return fixExt(toUrl(resolvedPath));
+            return toUrl(resolvedPath);
         }
 
-        return fixExt(toUrl(id));
+        return toUrl(id);
     };
 
     return resolver;
 }
-
-const fixExt = (path: string) => (extname(path) ? path : `${path}.js`);

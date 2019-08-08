@@ -2,15 +2,24 @@ import { log } from './log';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { wrapP } from './wrapP';
+import { moduleIDToPath } from './moduleIDToPath';
+import { parseModuleID } from './parseModuleID';
 import { MagentoRequireConfig } from './types';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { createRequireResolver } from './createRequireResolver';
 
 type AMDGraph = Record<string, string[]>;
+type CacheEntry = {
+    read: Promise<string>;
+    path: string;
+    id: string;
+    plugin: string;
+};
 
 /**
  * @summary Build a dependency graph of AMD modules, starting
  *          from a single entry module
+ * @todo Implement support for mixins
  */
 export async function traceAMDDependencies(
     entryModuleID: string,
@@ -19,18 +28,20 @@ export async function traceAMDDependencies(
 ): Promise<AMDGraph> {
     const resolver = createRequireResolver(requireConfig);
     const toVisit: Set<string> = new Set();
-    const reads: Map<string, Promise<string>> = new Map();
+    const moduleCache: Map<string, CacheEntry> = new Map();
     const graph: AMDGraph = {};
 
     const addDep = (dep: string) => {
         toVisit.add(dep);
+        const { id, plugin } = parseModuleID(dep);
+        const path = moduleIDToPath({ id, plugin });
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
-        const pendingRead = quietAsyncRejectionWarning(
-            fs.readFile(join(baseDir, dep), 'utf8'),
+        const read = quietAsyncRejectionWarning(
+            fs.readFile(join(baseDir, path), 'utf8'),
         );
-        reads.set(dep, pendingRead);
+        moduleCache.set(dep, { read, path, id, plugin });
     };
 
     log.debug(`Begin tracing AMD dependencies`);
@@ -43,8 +54,10 @@ export async function traceAMDDependencies(
         toVisit.delete(resolvedID);
         log.debug(`Tracing dependencies for "${resolvedID}"`);
 
-        const pendingRead = reads.get(resolvedID) as Promise<string>;
-        const [err, source] = await wrapP(pendingRead);
+        const { read, path, id, plugin } = moduleCache.get(
+            resolvedID,
+        ) as CacheEntry;
+        const [err, source] = await wrapP(read);
         if (err) throw decorateReadErrorMessage(resolvedID, err);
 
         const { deps } = parseJavaScriptDeps(source as string);
