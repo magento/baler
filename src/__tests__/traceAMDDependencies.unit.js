@@ -28,3 +28,13 @@ test('Require app with relative import', async () => {
         'dir/bar.js': [],
     });
 });
+
+test('Require app with cycle', async () => {
+    const appRoot = join(__dirname, '__fixtures__', 'require-app-with-cycle');
+    const results = await traceAMDDependencies('main', {}, appRoot);
+    expect(results).toEqual({
+        'main.js': ['foo.js'],
+        'foo.js': ['bar.js'],
+        'bar.js': ['foo.js'],
+    });
+});
