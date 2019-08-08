@@ -1,6 +1,7 @@
 import { log } from './log';
 import { join } from 'path';
 import { promises as fs } from 'fs';
+import { wrapP } from './wrapP';
 import { MagentoRequireConfig } from './types';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { createRequireResolver } from './createRequireResolver';
@@ -32,9 +33,9 @@ export async function traceAMDDependencies(
         reads.set(dep, pendingRead);
     };
 
+    log.debug(`Begin tracing AMD dependencies`);
     // Manually add the entry point
     addDep(resolver(entryModuleID));
-    log.debug(`Begin tracing AMD dependencies, starting with ${entryModuleID}`);
 
     // Breadth-first search of the graph
     while (toVisit.size) {
@@ -42,14 +43,19 @@ export async function traceAMDDependencies(
         toVisit.delete(resolvedID);
         log.debug(`Tracing dependencies for "${resolvedID}"`);
 
-        const source = (await reads.get(resolvedID)) as string;
-        const { deps } = parseJavaScriptDeps(source);
+        const pendingRead = reads.get(resolvedID) as Promise<string>;
+        const [err, source] = await wrapP(pendingRead);
+        if (err) throw decorateReadErrorMessage(resolvedID, err);
+
+        const { deps } = parseJavaScriptDeps(source as string);
+        if (deps.length) {
+            log.debug(`Found dependency request for: ${deps.join(', ')}`);
+        }
         graph[resolvedID] = [];
 
         deps.forEach(dep => {
             const resolvedDepID = resolver(dep, resolvedID);
             graph[resolvedID].push(resolvedDepID);
-            log.debug(`Found dependency "${resolvedDepID}" in ${resolvedID}`);
             if (!graph.hasOwnProperty(resolvedDepID)) {
                 addDep(resolvedDepID);
             }
@@ -70,4 +76,18 @@ export async function traceAMDDependencies(
 function quietAsyncRejectionWarning<T>(promise: Promise<T>) {
     promise.catch(() => {});
     return promise;
+}
+
+function decorateReadErrorMessage(
+    moduleID: string,
+    err: NodeJS.ErrnoException,
+) {
+    const strBuilder: string[] = [
+        'Failed reading an AMD module from disk.\n',
+        `  ID: "${moduleID}"\n`,
+        `  Path: "${err.path}"\n`,
+        `  Code: "${err.code}"`,
+    ];
+    err.message = strBuilder.join('');
+    return err;
 }

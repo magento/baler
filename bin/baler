@@ -31,4 +31,7 @@ process.env.BALER_LOG_LEVEL = process.env.BALER_LOG_LEVEL || 'info';
 require('../dist/cli')
     .run(process.cwd())
     .then(console.log)
-    .catch(console.error);
+    .catch(function(error) {
+        console.error(error.message);
+        process.exit(1);
+    });
