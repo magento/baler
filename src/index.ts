@@ -9,6 +9,7 @@ import { generateDotGraph } from './generateDotGraph';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluateRequireConfig } from './evaluateRequireConfig';
 
+// TODO: This should be everything under `deps` in a compiled require config
 const BUNDLE_ENTRY = 'mage/bootstrap';
 
 /**
