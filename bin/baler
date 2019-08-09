@@ -3,7 +3,7 @@
 /**
  * Note: This file should remain ES5 only, and should not use any
  * node APIs not found in 0.x releases. Lots of Magento users
- * are not regular users of node, and might have extremely only versions
+ * are not regular users of node, and might have extremely old versions
  * of node installed. Keeping this file to ES5 and old APIs means
  * the user will see our helpful error below, instead of something cryptic
  */

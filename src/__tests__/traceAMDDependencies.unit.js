@@ -38,3 +38,7 @@ test('Require app with cycle', async () => {
         bar: ['foo'],
     });
 });
+
+test.todo('Works with text! dependency on html file');
+test.todo('Throws descriptive error when file cannot be read');
+test.todo('Works with RequireJS built-ins (module, require, exports)');
