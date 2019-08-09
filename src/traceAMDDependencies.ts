@@ -31,7 +31,7 @@ export async function traceAMDDependencies(
     const moduleCache: Map<string, CacheEntry> = new Map();
     const graph: AMDGraph = {};
 
-    const addDepToVisitList = (resolvedDepID: string) => {
+    const addDependencyToGraph = (resolvedDepID: string) => {
         if (graph.hasOwnProperty(resolvedDepID)) return;
         graph[resolvedDepID] = [];
 
@@ -55,7 +55,7 @@ export async function traceAMDDependencies(
 
     log.debug(`Begin tracing AMD dependencies`);
     // Manually add the entry point
-    addDepToVisitList(entryModuleID);
+    addDependencyToGraph(entryModuleID);
 
     // Breadth-first search of the graph
     while (toVisit.size) {
@@ -88,13 +88,13 @@ export async function traceAMDDependencies(
             if (id) {
                 const resolvedDepID = resolver(id, resolvedID);
                 graph[resolvedID].push(resolvedDepID);
-                addDepToVisitList(resolvedDepID);
+                addDependencyToGraph(resolvedDepID);
             }
 
             if (plugin) {
                 const resolvedPluginID = resolver(plugin);
                 graph[resolvedID].push(resolvedPluginID);
-                addDepToVisitList(resolvedPluginID);
+                addDependencyToGraph(resolvedPluginID);
             }
         });
     }

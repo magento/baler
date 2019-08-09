@@ -5,6 +5,7 @@ import { promises as fs } from 'fs';
 import { parseTemplateDeps } from './parseTemplateDeps';
 import { Theme } from './types';
 import fromentries from 'fromentries';
+import { generateDotGraph } from './generateDotGraph';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluateRequireConfig } from './evaluateRequireConfig';
 
@@ -49,7 +50,7 @@ async function bundleTheme(magentoRoot: string, theme: Theme) {
         requireConfig,
         firstLocaleRoot,
     );
-    console.log(JSON.stringify(graph, null, 2));
+    console.log(generateDotGraph(graph));
 }
 
 async function parsePHTMLTemplates(
