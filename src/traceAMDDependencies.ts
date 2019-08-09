@@ -22,7 +22,7 @@ const BUILT_IN_DEPS = ['exports', 'require', 'module'];
  * @todo Implement support for mixins
  */
 export async function traceAMDDependencies(
-    entryModuleID: string,
+    entryModuleIDs: string[],
     requireConfig: MagentoRequireConfig,
     baseDir: string,
 ): Promise<AMDGraph> {
@@ -54,8 +54,8 @@ export async function traceAMDDependencies(
     };
 
     log.debug(`Begin tracing AMD dependencies`);
-    // Manually add the entry point
-    addDependencyToGraph(entryModuleID);
+    // Seed the visitors list with entry points
+    entryModuleIDs.forEach(addDependencyToGraph);
 
     // Breadth-first search of the graph
     while (toVisit.size) {

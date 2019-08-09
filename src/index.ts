@@ -46,8 +46,14 @@ async function bundleTheme(magentoRoot: string, theme: Theme) {
     log.debug(`Reading "requirejs-config.js" from ${requireConfigPath}`);
     const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
     const requireConfig = evaluateRequireConfig(rawRequireConfig);
+    const entryPoints = requireConfig.deps;
+    if (!Array.isArray(entryPoints)) {
+        throw new Error(
+            `Could not find entry point(s) using "deps" in "requirejs-config.js" for theme ${theme.vendor}/${theme.name}`,
+        );
+    }
     const graph = await traceAMDDependencies(
-        BUNDLE_ENTRY,
+        entryPoints,
         requireConfig,
         firstLocaleRoot,
     );

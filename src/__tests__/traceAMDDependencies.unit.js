@@ -7,7 +7,7 @@ test('Simple Require app with no config and no cycles', async () => {
         '__fixtures__',
         'simple-require-app-no-config',
     );
-    const results = await traceAMDDependencies('main', {}, appRoot);
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
     expect(results).toEqual({
         main: ['foo'],
         foo: ['bar'],
@@ -21,7 +21,7 @@ test('Require app with relative import', async () => {
         '__fixtures__',
         'require-app-relative-import',
     );
-    const results = await traceAMDDependencies('main', {}, appRoot);
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
     expect(results).toEqual({
         main: ['dir/foo'],
         'dir/foo': ['dir/bar'],
@@ -31,7 +31,7 @@ test('Require app with relative import', async () => {
 
 test('Require app with cycle', async () => {
     const appRoot = join(__dirname, '__fixtures__', 'require-app-with-cycle');
-    const results = await traceAMDDependencies('main', {}, appRoot);
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
     expect(results).toEqual({
         main: ['foo'],
         foo: ['bar'],
