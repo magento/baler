@@ -278,6 +278,11 @@ interface RequireMap {
 }
 
 interface Require {
+    s: {
+        contexts: {
+            [key: string]: RequireConfig;
+        };
+    };
     /**
      * Configure require.js
      **/

@@ -7,10 +7,7 @@ import { Theme } from './types';
 import fromentries from 'fromentries';
 import { generateDotGraph } from './generateDotGraph';
 import { traceAMDDependencies } from './traceAMDDependencies';
-import { evaluateRequireConfig } from './evaluateRequireConfig';
-
-// TODO: This should be everything under `deps` in a compiled require config
-const BUNDLE_ENTRY = 'mage/bootstrap';
+import { evaluate } from './requireConfig';
 
 /**
  * @summary Create bundles for multiple deployed themes in pub/static.
@@ -45,13 +42,15 @@ async function bundleTheme(magentoRoot: string, theme: Theme) {
     );
     log.debug(`Reading "requirejs-config.js" from ${requireConfigPath}`);
     const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
-    const requireConfig = evaluateRequireConfig(rawRequireConfig);
+    const requireConfig = evaluate(rawRequireConfig);
     const entryPoints = requireConfig.deps;
+
     if (!Array.isArray(entryPoints)) {
         throw new Error(
             `Could not find entry point(s) using "deps" in "requirejs-config.js" for theme ${theme.vendor}/${theme.name}`,
         );
     }
+
     const graph = await traceAMDDependencies(
         entryPoints,
         requireConfig,
