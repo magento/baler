@@ -15,17 +15,55 @@ export async function isMagentoRoot(magentoRoot: string) {
 }
 
 /**
- * @summary Get a list of all .phtml and .html files in all
- *          app and vendor directories in a Magento installation
+ * @summary Get a list of names for all enabled modules.
+ *          We _could_ use a full PHP parser here to be safe,
+ *          but `app/etc/config.php` is codegen'd, so the odds
+ *          of it not following very specific conventions is small
  */
-export async function collectTemplates(magentoRoot: string) {
+export async function getEnabledModules(magentoRoot: string) {
+    const configPath = join(magentoRoot, 'app/etc/config.php');
+    const rawConfig = await fs.readFile(configPath, 'utf8').catch(() => '');
+    if (!rawConfig) {
+        throw new Error(
+            `Failed to read list of enabled modules from ${configPath}`,
+        );
+    }
+
+    const [, rawArrayBody = ''] =
+        rawConfig.match(/'modules'\s*=>\s*\[(.+)\]/s) || [];
+    const items = rawArrayBody.split(',').map(t => t.trim());
+
+    const enabledModules: string[] = [];
+    for (const item of items) {
+        const [, name = '', enabledStr = ''] =
+            item.match(/'(\w+)'\s*=>\s*([01])/) || [];
+        if (name && Number(enabledStr)) enabledModules.push(name);
+    }
+
+    return enabledModules;
+}
+
+/**
+ * @summary Get a list of all .phtml files in all app and vendor
+ *          directories in a Magento installation
+ * @todo Switch from a globbing lib to more explicit scraping of target
+ *       folders. Globbing was just cheap to use during the POC phase
+ */
+export async function getPHTMLTemplatePaths(magentoRoot: string) {
     const composerDirs = await composerComponentPaths(magentoRoot);
-    const appDirs = 'app/{code,design}/**/*.{phtml,html}';
-    const vendorDirs = `vendor/{${composerDirs.join(',')}}/**/*.{phtml,html}`;
+    const appDirs = 'app/{code,design}/**/*.phtml';
+    const vendorDirs = `vendor/{${composerDirs.join(',')}}/**/*.phtml`;
 
     return glob([appDirs, vendorDirs], {
         cwd: magentoRoot,
     });
+}
+
+export async function getPHTMLTemplatesForTheme(
+    magentoRoot: string,
+    theme: Theme,
+) {
+    const themeRoot = join(magentoRoot, theme.pathFromStoreRoot);
 }
 
 /**
