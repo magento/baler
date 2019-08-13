@@ -8,7 +8,7 @@ test('Simple Require app with no config and no cycles', async () => {
         'simple-require-app-no-config',
     );
     const results = await traceAMDDependencies(['main'], {}, appRoot);
-    expect(results).toEqual({
+    expect(results.graph).toEqual({
         main: ['foo'],
         foo: ['bar'],
         bar: [],
@@ -22,7 +22,7 @@ test('Require app with relative import', async () => {
         'require-app-relative-import',
     );
     const results = await traceAMDDependencies(['main'], {}, appRoot);
-    expect(results).toEqual({
+    expect(results.graph).toEqual({
         main: ['dir/foo'],
         'dir/foo': ['dir/bar'],
         'dir/bar': [],
@@ -32,7 +32,7 @@ test('Require app with relative import', async () => {
 test('Require app with cycle', async () => {
     const appRoot = join(__dirname, '__fixtures__', 'require-app-with-cycle');
     const results = await traceAMDDependencies(['main'], {}, appRoot);
-    expect(results).toEqual({
+    expect(results.graph).toEqual({
         main: ['foo'],
         foo: ['bar'],
         bar: ['foo'],
@@ -42,3 +42,4 @@ test('Require app with cycle', async () => {
 test.todo('Works with text! dependency on html file');
 test.todo('Throws descriptive error when file cannot be read');
 test.todo('Works with RequireJS built-ins (module, require, exports)');
+test.todo('RequireJS app with missing dependency works, but has warning');
