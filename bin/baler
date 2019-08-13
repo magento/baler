@@ -32,6 +32,6 @@ require('../dist/cli')
     .run(process.cwd())
     .then(console.log)
     .catch(function(error) {
-        console.error(error.message);
+        console.error(error.stack);
         process.exit(1);
     });

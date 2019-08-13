@@ -1,8 +1,15 @@
+// Note: Most of the code for this module is copypasta from the
+// `scd` project. When both are released and supported, we should
+// break this out to a separately-published module. It will be useful
+// for any node-based tooling that operates against Magento stores
+
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
-import { Theme } from './types';
+import { Theme, Components, Module, DeployedTheme, StoreData } from './types';
+import fromEntries from 'fromentries';
+import { parse } from 'fast-xml-parser';
 
 /**
  * @summary Hacky but functional validation that a directory is the
@@ -44,56 +51,38 @@ export async function getEnabledModules(magentoRoot: string) {
 }
 
 /**
- * @summary Get a list of all .phtml files in all app and vendor
- *          directories in a Magento installation
- * @todo Switch from a globbing lib to more explicit scraping of target
- *       folders. Globbing was just cheap to use during the POC phase
+ * @summary Finds all Magento components (modules/themes) in
+ * both app/code and vendor
  */
-export async function getPHTMLTemplatePaths(magentoRoot: string) {
-    const composerDirs = await composerComponentPaths(magentoRoot);
-    const appDirs = 'app/{code,design}/**/*.phtml';
-    const vendorDirs = `vendor/{${composerDirs.join(',')}}/**/*.phtml`;
+export async function getComponents(root: string): Promise<Components> {
+    const [composer, nonComposer] = await Promise.all([
+        getComposerComponents(root),
+        getNonComposerComponents(root),
+    ]);
 
-    return glob([appDirs, vendorDirs], {
-        cwd: magentoRoot,
-    });
-}
+    const allModules = [...composer.modules, ...nonComposer.modules];
+    const allThemes = [...composer.themes, ...nonComposer.themes];
 
-export async function getPHTMLTemplatesForTheme(
-    magentoRoot: string,
-    theme: Theme,
-) {
-    const themeRoot = join(magentoRoot, theme.pathFromStoreRoot);
-}
+    const modulesByName = fromEntries(allModules.map(m => [m.moduleID, m]));
+    const themesByID = fromEntries(
+        allThemes.map(theme => {
+            return [theme.themeID, theme];
+        }),
+    );
 
-/**
- * @summary Get a list of all composer dirs that are Magento modules or themes
- */
-async function composerComponentPaths(magentoRoot: string) {
-    const lockfilePath = join(magentoRoot, 'composer.lock');
-    const rawLockfile = await fs.readFile(lockfilePath, 'utf8').catch(() => '');
-    if (!rawLockfile) {
-        // Should possibly just be a warning, but does anyone _not_ use composer with m2?
-        throw new Error('Could not find "composer.lock" in Magento root');
-    }
-
-    const lockfile = JSON.parse(rawLockfile);
-    const paths = [];
-
-    for (const { type, name } of lockfile.packages) {
-        if (type === 'magento2-module' || type === 'magento2-theme') {
-            paths.push(name);
-        }
-    }
-
-    return paths;
+    return {
+        modules: modulesByName,
+        themes: themesByID,
+    };
 }
 
 /**
  * @summary Get a list of all _deployed_ frontend and adminhtml themes
  *          for all vendors
  */
-export async function getDeployedThemes(magentoRoot: string) {
+export async function getDeployedThemes(
+    magentoRoot: string,
+): Promise<StoreData['deployedThemes']> {
     const staticRoot = join(magentoRoot, 'pub', 'static');
 
     const [frontendVendors, adminVendors] = await Promise.all([
@@ -103,11 +92,13 @@ export async function getDeployedThemes(magentoRoot: string) {
 
     const pendingFrontendThemes = Promise.all(
         frontendVendors.map(v =>
-            getThemesForVendor(magentoRoot, 'frontend', v),
+            getDeployedThemesForVendor(magentoRoot, 'frontend', v),
         ),
     );
     const pendingAdminThemes = Promise.all(
-        adminVendors.map(v => getThemesForVendor(magentoRoot, 'adminhtml', v)),
+        adminVendors.map(v =>
+            getDeployedThemesForVendor(magentoRoot, 'adminhtml', v),
+        ),
     );
 
     const [frontendThemes, adminThemes] = await Promise.all([
@@ -121,12 +112,240 @@ export async function getDeployedThemes(magentoRoot: string) {
     };
 }
 
+/**
+ * @summary Get an unordered list of all .phtml files for a specific
+ *          area (frontend/adminhtml/base) for enabled modules only
+ * @todo Switch from fast-glob to manual recursive crawling of the fs.
+ *       Globbing has too much of a perf penalty
+ */
+export async function getPHTMLFilesEligibleForUseWithTheme(
+    magentoRoot: string,
+    themeHierarchy: Theme[],
+    enabledModules: string[],
+    modules: Record<string, Module>,
+): Promise<string[]> {
+    const moduleGlobs = enabledModules.map(moduleID => {
+        const mod = modules[moduleID];
+        return join(
+            mod.pathFromStoreRoot,
+            'view',
+            `{${themeHierarchy[0].area},base}`,
+            'templates',
+            '**/*.phtml',
+        );
+    });
+
+    const themeGlobs = flatten(
+        enabledModules.map(m => {
+            return themeHierarchy.map(
+                t => `${t.pathFromStoreRoot}/${m}/templates/**/*.phtml`,
+            );
+        }),
+    );
+
+    return glob([...moduleGlobs, ...themeGlobs], {
+        cwd: magentoRoot,
+        onlyFiles: true,
+    });
+}
+
+async function getNonComposerComponents(root: string) {
+    const [modules, themes] = await Promise.all([
+        getNonComposerModules(root),
+        getNonComposerThemes(root),
+    ]);
+    return { modules, themes };
+}
+
+async function getNonComposerModules(root: string) {
+    const codeVendorsDir = join(root, 'app', 'code');
+    const vendors = await safeReaddir(codeVendorsDir);
+    if (!vendors.length) return [];
+
+    const modules = await Promise.all(
+        vendors.map(async vendor => {
+            const moduleNames = await fs.readdir(
+                join(codeVendorsDir, vendor),
+                'utf8',
+            );
+            return Promise.all(
+                moduleNames.map(mod =>
+                    getModuleConfig(root, join('app', 'code', vendor, mod)),
+                ),
+            );
+        }),
+    );
+
+    return flatten(modules);
+}
+
+async function getModuleConfig(root: string, path: string): Promise<Module> {
+    const configPath = join(root, path, 'etc', 'module.xml');
+    const rawConfig = await fs.readFile(configPath, 'utf8');
+    const parsedConfig = parse(rawConfig, {
+        ignoreAttributes: false,
+        attributeNamePrefix: '',
+        ignoreNameSpace: true,
+    });
+
+    const config = {
+        moduleID: parsedConfig.config.module.name as string,
+        sequence: [] as string[],
+        pathFromStoreRoot: path,
+    };
+    const { sequence } = parsedConfig.config.module;
+
+    if (!sequence) return config;
+
+    if (Array.isArray(sequence.module)) {
+        // multiple dependencies
+        config.sequence = sequence.module.map((m: any) => m.name) as string[];
+    } else {
+        // single dependency (the xml parser is weird)
+        config.sequence.push(sequence.module.name);
+    }
+
+    return config;
+}
+
+async function getNonComposerThemes(root: string) {
+    const [frontendVendors, adminVendors] = await Promise.all([
+        safeReaddir(join(root, 'app', 'design', 'frontend')),
+        safeReaddir(join(root, 'app', 'design', 'adminhtml')),
+    ]);
+
+    const pendingFrontend = frontendVendors.map(vendor =>
+        getNonComposerThemesFromVendorInArea(root, vendor, 'frontend'),
+    );
+    const pendingAdmin = adminVendors.map(vendor =>
+        getNonComposerThemesFromVendorInArea(root, vendor, 'adminhtml'),
+    );
+
+    const frontendThemes = flatten(await Promise.all(pendingFrontend));
+    const adminThemes = flatten(await Promise.all(pendingAdmin));
+
+    return [...frontendThemes, ...adminThemes];
+}
+
+async function getNonComposerThemesFromVendorInArea(
+    root: string,
+    vendor: string,
+    area: Theme['area'],
+): Promise<Theme[]> {
+    const vendorPath = join('app', 'design', area, vendor);
+    const themes = await fs.readdir(join(root, vendorPath), 'utf8');
+    return Promise.all(
+        themes.map(async name => ({
+            name,
+            vendor,
+            themeID: `${vendor}/${name}`,
+            area,
+            parentID: await getThemeParentName(join(root, vendorPath, name)),
+            pathFromStoreRoot: join('app', 'design', area, vendor, name),
+        })),
+    );
+}
+
+type ComposerLock = {
+    packages: {
+        name: string;
+        type:
+            | 'magento2-module'
+            | 'magento2-theme'
+            | 'metapackage'
+            | 'magento2-language';
+    }[];
+};
+
+async function getComposerComponents(root: string) {
+    const lockfile = await fs
+        .readFile(join(root, 'composer.lock'), 'utf8')
+        .catch(() => '');
+    // Composer lock file isn't a requirement if you're
+    // not using composer
+    if (!lockfile) {
+        return { modules: [], themes: [] };
+    }
+
+    // We're relying on the composer lock file because it's
+    // significantly faster than crawling each dependency dir
+    const composerLock = JSON.parse(lockfile) as ComposerLock;
+    const pendingModules: Promise<Module>[] = [];
+    const pendingThemes: Promise<Theme>[] = [];
+
+    for (const { name, type } of composerLock.packages) {
+        if (type === 'magento2-module') {
+            const modulePath = join('vendor', name);
+            pendingModules.push(getModuleConfig(root, modulePath));
+        }
+
+        if (type === 'magento2-theme') {
+            pendingThemes.push(getThemeFromComposerName(root, name));
+        }
+    }
+
+    return {
+        modules: await Promise.all(pendingModules),
+        themes: await Promise.all(pendingThemes),
+    };
+}
+
+async function getThemeFromComposerName(
+    root: string,
+    pkgName: string,
+): Promise<Theme> {
+    const [vendor, pieces] = pkgName.split('/');
+    const [firstPart, area, themeName] = pieces.split('-');
+    if (
+        firstPart !== 'theme' ||
+        (area !== 'frontend' && area !== 'adminhtml')
+    ) {
+        throw new Error(
+            `Unrecognized theme package name: ${pkgName}. ` +
+                'The format "<vendor>/theme-<area>-<name>" must be used.',
+        );
+    }
+    const pathFromStoreRoot = join('vendor', pkgName);
+    return {
+        name: themeName,
+        vendor,
+        themeID: normalizeComposerThemeName(vendor, themeName),
+        area: area as Theme['area'],
+        parentID: await getThemeParentName(join(root, pathFromStoreRoot)),
+        pathFromStoreRoot: pathFromStoreRoot,
+    };
+}
+
+function normalizeComposerThemeName(vendor: string, name: string) {
+    // I have no clue if this is the logic used in Magento core,
+    // but it's certainly a half-decent guess, yeah?
+    const normalizedVendor = vendor
+        .split('-')
+        .map(v => `${v[0].toUpperCase()}${v.slice(1)}`)
+        .join('');
+    return `${normalizedVendor}/${name}`;
+}
+
+async function getThemeParentName(themePath: string) {
+    const themeXMLPath = join(themePath, 'theme.xml');
+    const source = await fs.readFile(themeXMLPath, 'utf8').catch(() => '');
+    if (!source) {
+        throw new Error(
+            `Could not find theme configuration (theme.xml) for theme at "${themeXMLPath}"`,
+        );
+    }
+    // Note: Skipping a full blown XML parser (for now) to maintain speed.
+    // Sander will hate me :D
+    const [, parent = ''] = source!.match(/<parent>(.+)<\/parent>/) || [];
+    return parent;
+}
+
 async function getLocalesForDeployedTheme(
     magentoRoot: string,
-    area: string,
+    area: 'frontend' | 'adminhtml',
     vendor: string,
     name: string,
-) {
+): Promise<string[]> {
     const themeRoot = join(magentoRoot, 'pub', 'static', area, vendor, name);
     const dirs = await safeReaddir(themeRoot);
 
@@ -135,11 +354,11 @@ async function getLocalesForDeployedTheme(
     return dirs.filter(d => reLang.test(d));
 }
 
-async function getThemesForVendor(
+async function getDeployedThemesForVendor(
     magentoRoot: string,
-    area: string,
+    area: 'frontend' | 'adminhtml',
     vendor: string,
-): Promise<Theme[]> {
+): Promise<DeployedTheme[]> {
     const vendorPath = join('pub', 'static', area, vendor);
     const themeNames = await safeReaddir(join(magentoRoot, vendorPath));
     // TODO: Filter non-theme dirs (example: hidden dot dirs)
@@ -147,14 +366,15 @@ async function getThemesForVendor(
         themeNames.map(async name => ({
             vendor,
             name,
+            themeID: `${vendor}/${name}`,
             area,
+            pathFromStoreRoot: join(vendorPath, name),
             locales: await getLocalesForDeployedTheme(
                 magentoRoot,
                 area,
                 vendor,
                 name,
             ),
-            pathFromStoreRoot: join(vendorPath, name),
         })),
     );
 }

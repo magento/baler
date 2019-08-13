@@ -4,14 +4,19 @@ import { promises as fs } from 'fs';
 import { wrapP } from './wrapP';
 import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
 import { parseModuleID } from './parseModuleID';
-import { MagentoRequireConfig } from './types';
+import {
+    MagentoRequireConfig,
+    AMDGraph,
+    TraceResult,
+    UnreadableDependencyWarning,
+} from './types';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { createRequireResolver } from './createRequireResolver';
 
-type AMDGraph = Record<string, string[]>;
 type CacheEntry = {
     read: Promise<string>;
     path: string;
+    issuer: string;
 };
 
 const BUILT_IN_DEPS = ['exports', 'require', 'module'];
@@ -25,13 +30,14 @@ export async function traceAMDDependencies(
     entryModuleIDs: string[],
     requireConfig: MagentoRequireConfig,
     baseDir: string,
-): Promise<AMDGraph> {
+): Promise<TraceResult> {
     const resolver = createRequireResolver(requireConfig);
     const toVisit: Set<string> = new Set();
     const moduleCache: Map<string, CacheEntry> = new Map();
     const graph: AMDGraph = {};
+    const warnings: TraceResult['warnings'] = [];
 
-    const addDependencyToGraph = (resolvedDepID: string) => {
+    const addDependencyToGraph = (resolvedDepID: string, issuer: string) => {
         if (graph.hasOwnProperty(resolvedDepID)) return;
         graph[resolvedDepID] = [];
 
@@ -50,23 +56,45 @@ export async function traceAMDDependencies(
         moduleCache.set(resolvedDepID, {
             read,
             path,
+            issuer,
         });
     };
 
-    log.debug(`Begin tracing AMD dependencies`);
+    const resolvedEntryIDs: string[] = [];
     // Seed the visitors list with entry points
-    entryModuleIDs.forEach(addDependencyToGraph);
+    entryModuleIDs.forEach(entryID => {
+        const { id, plugin } = parseModuleID(entryID);
+        if (id) {
+            const resolvedEntryID = resolver(id);
+            resolvedEntryIDs.push(resolvedEntryID);
+            addDependencyToGraph(resolvedEntryID, '<entry point>');
+        }
+
+        if (plugin) {
+            const resolvedEntryID = resolver(plugin);
+            resolvedEntryIDs.push(resolvedEntryID);
+            addDependencyToGraph(resolvedEntryID, '<entry point>');
+        }
+    });
 
     // Breadth-first search of the graph
     while (toVisit.size) {
         const [resolvedID] = toVisit;
         toVisit.delete(resolvedID);
-        log.debug(`Tracing dependencies for "${resolvedID}"`);
+        log.debug(`Preparing to read + parse "${resolvedID}"`);
 
-        const { read } = moduleCache.get(resolvedID) as CacheEntry;
+        const { read, path, issuer } = moduleCache.get(
+            resolvedID,
+        ) as CacheEntry;
         const [err, source] = await wrapP(read);
         if (err) {
-            throw decorateReadErrorMessage(resolvedID, err);
+            // Missing files are treated as warnings, rather than hard errors, because
+            // a storefront is still usable (will just take a perf hit)
+            warnings.push(
+                unreadableDependencyWarning(resolvedID, path, issuer),
+            );
+            log.debug(`Warning for missing dependency "${resolvedID}"`);
+            continue;
         }
 
         const { deps } = parseJavaScriptDeps(source as string);
@@ -88,18 +116,18 @@ export async function traceAMDDependencies(
             if (id) {
                 const resolvedDepID = resolver(id, resolvedID);
                 graph[resolvedID].push(resolvedDepID);
-                addDependencyToGraph(resolvedDepID);
+                addDependencyToGraph(resolvedDepID, resolvedID);
             }
 
             if (plugin) {
                 const resolvedPluginID = resolver(plugin);
                 graph[resolvedID].push(resolvedPluginID);
-                addDependencyToGraph(resolvedPluginID);
+                addDependencyToGraph(resolvedPluginID, resolvedID);
             }
         });
     }
 
-    return graph;
+    return { graph, warnings, resolvedEntryIDs };
 }
 
 /**
@@ -115,16 +143,15 @@ function quietAsyncRejectionWarning<T>(promise: Promise<T>) {
     return promise;
 }
 
-function decorateReadErrorMessage(
-    moduleID: string,
-    err: NodeJS.ErrnoException,
-) {
-    const strBuilder: string[] = [
-        'Failed reading an AMD module from disk.\n',
-        `  ID: "${moduleID}"\n`,
-        `  Path: "${err.path}"\n`,
-        `  Code: "${err.code}"`,
-    ];
-    err.message = strBuilder.join('');
-    return err;
+function unreadableDependencyWarning(
+    resolvedID: string,
+    path: string,
+    issuer: string,
+): UnreadableDependencyWarning {
+    return {
+        type: 'UnreadableDependencyWarning',
+        resolvedID,
+        path,
+        issuer,
+    };
 }

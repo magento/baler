@@ -1,4 +1,6 @@
-export function generateDotGraph(graph: Record<string, string[]>) {
+import { AMDGraph } from './types';
+
+export function generateDotGraph(graph: AMDGraph) {
     const strBuilder = ['digraph {'];
     for (const [id, deps] of Object.entries(graph)) {
         strBuilder.push(...deps.map(d => `  "${id}" -> "${d}"`));

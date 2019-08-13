@@ -48,6 +48,7 @@
     "console-log-level": "^1.4.1",
     "esquery": "^1.0.1",
     "fast-glob": "^3.0.4",
+    "fast-xml-parser": "^3.12.19",
     "fromentries": "^1.1.0",
     "htmlparser2": "^3.10.1",
     "requirejs": "^2.3.6",
