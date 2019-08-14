@@ -7,6 +7,7 @@ import { promises as fs } from 'fs';
 import { Theme, StoreData, DeployedTheme } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate } from './requireConfig';
+import prettyBytes from 'pretty-bytes';
 
 /**
  * @summary Create bundles for multiple deployed themes in pub/static.
@@ -29,7 +30,7 @@ export async function bundleThemes(magentoRoot: string, store: StoreData) {
 }
 
 /**
- * @summary Create bundles for a single theme (frontend or adminhtml)
+ * @summary Create bundles for a single theme
  */
 async function bundleSingleTheme(
     magentoRoot: string,
@@ -79,11 +80,18 @@ async function bundleSingleTheme(
 
     const bundleDir = join(firstLocaleRoot, 'balerbundles');
     await fs.mkdir(bundleDir, { recursive: true });
+    const bundlePath = join(bundleDir, bundle.bundleFilename);
     await Promise.all([
-        fs.writeFile(join(bundleDir, bundle.bundleFilename), bundle.bundle),
+        fs.writeFile(bundlePath, bundle.bundle),
         fs.writeFile(
             join(bundleDir, bundle.sourcemapFilename),
             bundle.sourcemap,
         ),
     ]);
+
+    return {
+        readableBundleSize: prettyBytes(Buffer.from(bundle.bundle).byteLength),
+        bundleFilename: bundle.bundleFilename,
+        bundlePath,
+    };
 }

@@ -19,7 +19,7 @@ export async function run(cwd: string) {
     exitWithMessageIfNoDeployedThemes(store);
 
     const results = await bundleThemes(cwd, store);
-    console.log('CLI run complete');
+    console.log(JSON.stringify(results, null, 2));
 }
 
 /**
@@ -29,10 +29,13 @@ export async function run(cwd: string) {
  */
 function exitWithMessageIfNoDeployedThemes(store: StoreData): void {
     const { frontend } = store.deployedThemes;
-    if (frontend.length) return;
+    const eligibleDeployedThemes = frontend.filter(
+        t => t.themeID !== 'Magento/blank',
+    );
+    if (eligibleDeployedThemes.length) return;
 
     const allThemeNames = Object.values(store.components.themes)
-        .filter(t => t.area === 'frontend')
+        .filter(t => t.area === 'frontend' && t.themeID !== 'Magento/blank')
         .map(t => t.themeID);
     log.error(
         "No deployed frontend theme(s) were found in your store's static directory, " +
