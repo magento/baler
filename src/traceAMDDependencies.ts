@@ -12,6 +12,8 @@ import {
 } from './types';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { createRequireResolver } from './createRequireResolver';
+import { getMixinsForModule } from './requireConfig';
+import { REQUIRE_BUILT_INS } from './requireBuiltIns';
 
 type CacheEntry = {
     read: Promise<string>;
@@ -19,12 +21,10 @@ type CacheEntry = {
     issuer: string;
 };
 
-const BUILT_IN_DEPS = ['exports', 'require', 'module'];
-
 /**
  * @summary Build a dependency graph of AMD modules, starting
  *          from a single entry module
- * @todo Implement support for mixins
+ * @todo Implement shim support
  */
 export async function traceAMDDependencies(
     entryModuleIDs: string[],
@@ -102,8 +102,18 @@ export async function traceAMDDependencies(
             log.debug(`Found dependency request for: ${deps.join(', ')}`);
         }
 
+        const mixins = getMixinsForModule(resolvedID, requireConfig).map(
+            mixin => resolver(mixin),
+        );
+
+        mixins.forEach(mixin => {
+            const resolvedMixinID = resolver(mixin);
+            graph[resolvedID].push(resolvedMixinID);
+            addDependencyToGraph(resolvedMixinID, '<mixin>');
+        });
+
         deps.forEach(dep => {
-            if (BUILT_IN_DEPS.includes(dep)) {
+            if (REQUIRE_BUILT_INS.includes(dep)) {
                 // We want data about built-in dependencies in the graph,
                 // but we don't want to try to read them from disk, since
                 // they come from the require runtime

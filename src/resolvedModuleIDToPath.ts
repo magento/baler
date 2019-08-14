@@ -5,5 +5,5 @@ export function resolvedModuleIDToPath(request: string, baseDir: string) {
     const ext = extname(request);
     const fullPath = join(baseDir, request);
 
-    return `${fullPath}${ext ? '' : '.js'}`;
+    return `${fullPath}${ext === '.html' || ext === '.js' ? '' : '.js'}`;
 }

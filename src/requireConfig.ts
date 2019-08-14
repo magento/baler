@@ -1,9 +1,17 @@
 import vm from 'vm';
 import { log } from './log';
 import { readFileSync } from 'fs';
-import { MagentoRequireConfig } from './types';
+import { MagentoRequireConfig, Shim } from './types';
 
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
+
+export function evaluate(rawConfig: string) {
+    try {
+        return evaluateRawConfig(rawConfig);
+    } catch {
+        throw new Error('Failed evaluating "requirejs-config.js"');
+    }
+}
 
 /**
  * @summary Evaluates a Magento RequireJS config, which is
@@ -11,7 +19,7 @@ const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
  *          wrapped in IIFEs. Various tricks are necessary to get all
  *          the pieces of the config that we need
  */
-export function evaluate(rawConfig: string) {
+function evaluateRawConfig(rawConfig: string) {
     log.debug('Evaluating raw "requirejs-config.js"');
 
     const sandbox: { require: Require } = Object.create(null);
@@ -55,7 +63,6 @@ export function getMixinsForModule(
     return discoveredMixins;
 }
 
-type Shim = Omit<RequireShim, 'init'>;
 /**
  * @summary Normalize the various ways a shim config can be defined
  */

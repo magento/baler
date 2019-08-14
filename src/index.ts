@@ -1,5 +1,6 @@
 import { getPHTMLFilesEligibleForUseWithTheme } from './magentoFS';
-import { bundleFromGraph } from './bundleFromGraph';
+import { createBundleFromDeps } from './createBundleFromDeps';
+import { computeDepsForBundle } from './computeDepsForBundle';
 import { getThemeHierarchy } from './getThemeHierarchy';
 import { join } from 'path';
 import { log } from './log';
@@ -7,7 +8,6 @@ import { promises as fs } from 'fs';
 import { parseTemplateDeps } from './parseTemplateDeps';
 import { Theme, StoreData, Module, DeployedTheme } from './types';
 import fromentries from 'fromentries';
-import { generateDotGraph } from './generateDotGraph';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate } from './requireConfig';
 import { flatten } from './flatten';
@@ -25,44 +25,25 @@ export async function bundleThemes(magentoRoot: string, store: StoreData) {
     // ];
     const themesToBundle = frontend.filter(t => t.themeID === 'Magento/luma');
 
-    const traceResults = await Promise.all(
+    const bundleResults = await Promise.all(
         themesToBundle.map(t => {
             const theme = components.themes[t.themeID];
             const themeHierarchy = getThemeHierarchy(theme, components.themes);
-            return computeThemeBundle(
-                magentoRoot,
-                themeHierarchy,
-                t,
-                store.enabledModules,
-                store.components.modules,
-            );
+            return bundleSingleTheme(magentoRoot, themeHierarchy, t, store);
         }),
     );
 
-    const bundlingResultsByTheme = await Promise.all(
-        traceResults.map(async traceResult => {
-            const result = await bundleFromGraph(
-                magentoRoot,
-                traceResult.graph,
-                traceResult.resolvedEntryIDs,
-            );
-            return result;
-        }),
-    );
-
-    return bundlingResultsByTheme;
+    return bundleResults;
 }
 
 /**
- * @summary Collect all graph data necessary to bundle a single theme
- *          for a single area (frontend/adminhtml)
+ * @summary Create bundles for a single theme (frontend or adminhtml)
  */
-async function computeThemeBundle(
+async function bundleSingleTheme(
     magentoRoot: string,
     themeHierarchy: Theme[],
     deployedTheme: DeployedTheme,
-    enabledModules: string[],
-    modules: Record<string, Module>,
+    store: StoreData,
 ) {
     // Note: All work only needs to be done against a single theme, and then
     // copied to each locale. JS should not change between locales
@@ -87,11 +68,39 @@ async function computeThemeBundle(
         );
     }
 
+    const traceResult = await traceAMDDependencies(
+        configEntryPoints,
+        requireConfig,
+        firstLocaleRoot,
+    );
+
+    const deps = computeDepsForBundle(
+        traceResult.graph,
+        traceResult.resolvedEntryIDs,
+    );
+    const bundle = await createBundleFromDeps(
+        'core-bundle',
+        deps,
+        firstLocaleRoot,
+        requireConfig,
+    );
+
+    const bundleDir = join(firstLocaleRoot, 'balerbundles');
+    await fs.mkdir(bundleDir, { recursive: true });
+    await Promise.all([
+        fs.writeFile(join(bundleDir, bundle.bundleFilename), bundle.bundle),
+        fs.writeFile(
+            join(bundleDir, bundle.sourcemapFilename),
+            bundle.sourcemap,
+        ),
+    ]);
+
+    // return bundle;
     // const templatePaths = await getPHTMLFilesEligibleForUseWithTheme(
     //     magentoRoot,
     //     themeHierarchy,
-    //     enabledModules,
-    //     modules,
+    //     store.enabledModules,
+    //     store.modules,
     // );
     // const templatesWithDeps = await parsePHTMLTemplates(
     //     magentoRoot,
@@ -99,12 +108,6 @@ async function computeThemeBundle(
     // );
     // // Cast to a Set to eliminate dupes found between various templates
     // const allTemplateDeps = new Set(flatten(Object.values(templatesWithDeps)));
-
-    return traceAMDDependencies(
-        [...configEntryPoints /*, ...allTemplateDeps*/],
-        requireConfig,
-        firstLocaleRoot,
-    );
 }
 
 async function parsePHTMLTemplates(

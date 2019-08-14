@@ -32,11 +32,11 @@ test('wrapNonShimmedModule wraps module', () => {
 
 test('wrapShimmedModule injects non-AMD module into define body with deps', () => {
     const result = wrapShimmedModule('bar', 'log("hello world");', {
-        bar: ['log'],
+        deps: ['log'],
     });
     expect(result.toString()).toMatchInlineSnapshot(`
         "define('bar', [\\"log\\"], function() {
-                // Shimmed by bundlegento
+                // Shimmed by @magento/baler
                 (function() {
                     log(\\"hello world\\");;
                 })();

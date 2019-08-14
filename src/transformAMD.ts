@@ -1,10 +1,9 @@
 import jsesc from 'jsesc';
 import MagicString from 'magic-string';
+import { Shim } from './types';
 
 // Tip: Can verify source-mappings are working correctly
 // using http://evanw.github.io/source-map-visualization/
-
-const RE_DEFINE = /define\s*\(/;
 
 /**
  * @summary Wrap a text module (commonly .html) in an AMD module,
@@ -48,27 +47,22 @@ export function wrapNonShimmedModule(id: string, source: string) {
  * @summary Rewrite a non-AMD module as an AMD module, using the provided
  *          shim config dependencies and exports values
  */
-export function wrapShimmedModule(
-    id: string,
-    source: string,
-    shimConfig: { [key: string]: RequireShim | string[] },
-) {
-    const shim = shimConfig[id];
-    const deps = Array.isArray(shim) ? shim : shim.deps || [];
-    const exports = Array.isArray(shim) ? undefined : shim.exports;
+export function wrapShimmedModule(id: string, source: string, shim: Shim) {
+    const deps = shim.deps || [];
     const [before, after] = `define('${id}', ${JSON.stringify(
         deps,
     )}, function() {
-        // Shimmed by bundlegento
+        // Shimmed by @magento/baler
         (function() {
             SPLIT;
         })();
-        return window['${exports}'];
+        return window['${shim.exports}'];
     });`.split('SPLIT');
 
     return new MagicString(source).prepend(before).append(after);
 }
 
+const RE_DEFINE = /define\s*\(/;
 /**
  * @summary Add the provided id as the first argument to a `define` call
  */
@@ -82,4 +76,23 @@ export function renameModule(id: string, source: string) {
     }
 
     return str.prependRight(index + match.length, `'${id}', `);
+}
+
+/**
+ * @summary Determine if a module is an AMD module using the
+ *          `define` function
+ */
+export function isAMDWithDefine(source: string) {
+    return RE_DEFINE.test(source);
+}
+
+const RE_NAMED_AMD = /define\s*\(\s*['"]/;
+/**
+ * @summary Determine if a module is already a named AMD module.
+ *          A named AMD module will have a string literal as the first
+ *          argument passed
+ */
+export function isNamedAMD(source: string) {
+    const match = RE_NAMED_AMD.exec(source);
+    return !!match;
 }

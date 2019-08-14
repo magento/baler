@@ -63,3 +63,5 @@ export type TraceResult = {
     resolvedEntryIDs: string[];
     warnings: UnreadableDependencyWarning[];
 };
+
+export type Shim = Omit<RequireShim, 'init'>;
