@@ -28,13 +28,15 @@ export async function run(cwd: string) {
  *          with an error
  */
 function exitWithMessageIfNoDeployedThemes(store: StoreData): void {
-    const { frontend, adminhtml } = store.deployedThemes;
-    if (frontend.length || adminhtml.length) return;
+    const { frontend } = store.deployedThemes;
+    if (frontend.length) return;
 
-    const allThemeNames = Object.keys(store.components.themes);
+    const allThemeNames = Object.values(store.components.themes)
+        .filter(t => t.area === 'frontend')
+        .map(t => t.themeID);
     log.error(
-        "No deployed theme(s) were found in your store's static directory, " +
-            'but the following themes are installed in your store:\n' +
+        "No deployed frontend theme(s) were found in your store's static directory, " +
+            'but the following are installed in your store:\n' +
             allThemeNames.map(n => `  - ${n}`).join('\n'),
         '\n Try running "bin/magento setup:static-content:deploy", ' +
             'then try running "baler" again.',
