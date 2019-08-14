@@ -6,7 +6,7 @@ import { log } from './log';
 import { promises as fs } from 'fs';
 import { Theme, StoreData, DeployedTheme } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
-import { evaluate } from './requireConfig';
+import { evaluate, generateBundleRequireConfig } from './requireConfig';
 import prettyBytes from 'pretty-bytes';
 
 /**
@@ -77,6 +77,11 @@ async function bundleSingleTheme(
         firstLocaleRoot,
         requireConfig,
     );
+    const newRequireConfig = generateBundleRequireConfig(
+        rawRequireConfig,
+        'core-bundle',
+        deps,
+    );
 
     const bundleDir = join(firstLocaleRoot, 'balerbundles');
     await fs.mkdir(bundleDir, { recursive: true });
@@ -86,6 +91,10 @@ async function bundleSingleTheme(
         fs.writeFile(
             join(bundleDir, bundle.sourcemapFilename),
             bundle.sourcemap,
+        ),
+        fs.writeFile(
+            join(firstLocaleRoot, 'requirejs-bundle-config.js'),
+            newRequireConfig,
         ),
     ]);
 

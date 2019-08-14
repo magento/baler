@@ -79,3 +79,28 @@ export function getShimsForModule(
 
     return shims;
 }
+
+/**
+ * @summary Add `bundles` configuration to an existing
+ *          `requirejs-config.js`, to prevent Require
+ *          from going to the network to load modules
+ *          that are in-flight inside of a bundle
+ */
+export function generateBundleRequireConfig(
+    rawConfig: string,
+    bundleID: string,
+    bundledDeps: string[],
+) {
+    return `(function() {
+    // Injected by @magento/baler. This config
+    // tells RequireJS which modules are in the
+    // bundle, to prevent require from trying to
+    // load bundled modules from the network
+    require.config({
+        bundles: {
+            '${bundleID}': ${JSON.stringify(bundledDeps)}
+        }
+    });
+})();
+${rawConfig}`;
+}
