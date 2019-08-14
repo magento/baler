@@ -36,6 +36,7 @@
     "@types/console-log-level": "^1.4.0",
     "@types/estree": "0.0.39",
     "@types/htmlparser2": "^3.10.1",
+    "@types/jsesc": "^0.4.29",
     "@types/node": "^12.6.8",
     "jest": "^24.8.0",
     "prettier": "^1.18.2",
@@ -51,6 +52,8 @@
     "fast-xml-parser": "^3.12.19",
     "fromentries": "^1.1.0",
     "htmlparser2": "^3.10.1",
+    "jsesc": "^2.5.2",
+    "magic-string": "^0.25.3",
     "requirejs": "^2.3.6",
     "source-map-support": "^0.5.12"
   }
