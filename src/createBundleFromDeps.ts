@@ -9,7 +9,7 @@ import {
     renameModule,
 } from './transformAMD';
 import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
-import { promises as fs } from 'fs';
+import { readFile } from './fsPromises';
 import { MagentoRequireConfig } from './types';
 import MagicString, { Bundle } from 'magic-string';
 
@@ -54,7 +54,7 @@ async function getFinalModuleSource(
     requireConfig: MagentoRequireConfig,
 ) {
     const path = resolvedModuleIDToPath(dep, baseDir);
-    const source = await fs.readFile(path, 'utf8');
+    const source = await readFile(path, 'utf8');
     const isHTML = extname(path) === '.html';
     const shims = getShimsForModule(dep, requireConfig);
     const hasDefine = isAMDWithDefine(source);

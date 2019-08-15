@@ -1,6 +1,6 @@
 import { log } from './log';
 import { extname } from 'path';
-import { promises as fs } from 'fs';
+import { readFile } from './fsPromises';
 import { wrapP } from './wrapP';
 import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
 import { parseModuleID } from './parseModuleID';
@@ -52,7 +52,7 @@ export async function traceAMDDependencies(
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
-        const read = quietAsyncRejectionWarning(fs.readFile(path, 'utf8'));
+        const read = quietAsyncRejectionWarning(readFile(path, 'utf8'));
         moduleCache.set(resolvedDepID, {
             read,
             path,

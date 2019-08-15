@@ -3,7 +3,7 @@ import { computeDepsForBundle } from './computeDepsForBundle';
 import { getThemeHierarchy } from './getThemeHierarchy';
 import { join } from 'path';
 import { log } from './log';
-import { promises as fs } from 'fs';
+import { readFile, mkdir, writeFile } from './fsPromises';
 import { Theme, StoreData, DeployedTheme, BundleResult } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate, generateBundleRequireConfig } from './requireConfig';
@@ -54,7 +54,7 @@ async function bundleSingleTheme(
         'requirejs-config.js',
     );
     log.debug(`Reading "requirejs-config.js" from ${requireConfigPath}`);
-    const rawRequireConfig = await fs.readFile(requireConfigPath, 'utf8');
+    const rawRequireConfig = await readFile(requireConfigPath, 'utf8');
     const requireConfig = evaluate(rawRequireConfig);
     const configEntryPoints = requireConfig.deps;
 
@@ -87,15 +87,12 @@ async function bundleSingleTheme(
     );
 
     const bundleDir = join(firstLocaleRoot, 'balerbundles');
-    await fs.mkdir(bundleDir, { recursive: true });
+    await mkdir(bundleDir, { recursive: true });
     const bundlePath = join(bundleDir, bundle.bundleFilename);
     await Promise.all([
-        fs.writeFile(bundlePath, bundle.bundle),
-        fs.writeFile(
-            join(bundleDir, bundle.sourcemapFilename),
-            bundle.sourcemap,
-        ),
-        fs.writeFile(
+        writeFile(bundlePath, bundle.bundle),
+        writeFile(join(bundleDir, bundle.sourcemapFilename), bundle.sourcemap),
+        writeFile(
             join(firstLocaleRoot, 'requirejs-bundle-config.js'),
             newRequireConfig,
         ),
@@ -106,5 +103,6 @@ async function bundleSingleTheme(
         bundleFilename: bundle.bundleFilename,
         bundlePath,
         themeID: deployedTheme.themeID,
+        deps,
     };
 }

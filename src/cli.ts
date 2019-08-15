@@ -4,6 +4,7 @@ import { log } from './log';
 import { isMagentoRoot } from './magentoFS';
 import { StoreData, BundleResult } from './types';
 import prettyBytes from 'pretty-bytes';
+import chalk from 'chalk';
 
 /**
  * @summary Execute the CLI
@@ -25,18 +26,20 @@ export async function run(cwd: string) {
 
 function generateReadableSummary(results: BundleResult[]): string {
     const header = [
-        `Finished analyzing and packaging bundles for ${results.length} themes.\n`,
+        chalk.green(
+            `Finished analyzing and packaging bundles for ${results.length} theme(s).\n`,
+        ),
         `Details:\n\n`,
     ].join('');
 
     const themeRows = results
         .map(r => {
+            const size = prettyBytes(r.totalBundleBytes);
             return [
                 `Theme: ${r.themeID}\n`,
                 `Bundle File: ${r.bundleFilename}\n`,
-                `Size: ${prettyBytes(
-                    r.totalBundleBytes,
-                )} (raw, not minified)\n`,
+                `Size: ${size} (raw, not minified)\n`,
+                `Module Count: ${r.deps.length}`,
             ].join('');
         })
         .join('');

@@ -3,7 +3,7 @@
 // break this out to a separately-published module. It will be useful
 // for any node-based tooling that operates against Magento stores
 
-import { promises as fs } from 'fs';
+import { readFile, readdir } from './fsPromises';
 import { join } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
@@ -17,7 +17,7 @@ import { parse } from 'fast-xml-parser';
  */
 export async function isMagentoRoot(magentoRoot: string) {
     const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
-    const entries = await fs.readdir(magentoRoot);
+    const entries = await readdir(magentoRoot);
     return EXPECTED_ENTRIES.every(e => entries.includes(e));
 }
 
@@ -29,7 +29,7 @@ export async function isMagentoRoot(magentoRoot: string) {
  */
 export async function getEnabledModules(magentoRoot: string) {
     const configPath = join(magentoRoot, 'app/etc/config.php');
-    const rawConfig = await fs.readFile(configPath, 'utf8').catch(() => '');
+    const rawConfig = await readFile(configPath, 'utf8').catch(() => '');
     if (!rawConfig) {
         throw new Error(
             `Failed to read list of enabled modules from ${configPath}`,
@@ -164,7 +164,7 @@ async function getNonComposerModules(root: string) {
 
     const modules = await Promise.all(
         vendors.map(async vendor => {
-            const moduleNames = await fs.readdir(
+            const moduleNames = await readdir(
                 join(codeVendorsDir, vendor),
                 'utf8',
             );
@@ -181,7 +181,7 @@ async function getNonComposerModules(root: string) {
 
 async function getModuleConfig(root: string, path: string): Promise<Module> {
     const configPath = join(root, path, 'etc', 'module.xml');
-    const rawConfig = await fs.readFile(configPath, 'utf8');
+    const rawConfig = await readFile(configPath, 'utf8');
     const parsedConfig = parse(rawConfig, {
         ignoreAttributes: false,
         attributeNamePrefix: '',
@@ -233,7 +233,7 @@ async function getNonComposerThemesFromVendorInArea(
     area: Theme['area'],
 ): Promise<Theme[]> {
     const vendorPath = join('app', 'design', area, vendor);
-    const themes = await fs.readdir(join(root, vendorPath), 'utf8');
+    const themes = await readdir(join(root, vendorPath), 'utf8');
     return Promise.all(
         themes.map(async name => ({
             name,
@@ -258,9 +258,9 @@ type ComposerLock = {
 };
 
 async function getComposerComponents(root: string) {
-    const lockfile = await fs
-        .readFile(join(root, 'composer.lock'), 'utf8')
-        .catch(() => '');
+    const lockfile = await readFile(join(root, 'composer.lock'), 'utf8').catch(
+        () => '',
+    );
     // Composer lock file isn't a requirement if you're
     // not using composer
     if (!lockfile) {
@@ -328,7 +328,7 @@ function normalizeComposerThemeName(vendor: string, name: string) {
 
 async function getThemeParentName(themePath: string) {
     const themeXMLPath = join(themePath, 'theme.xml');
-    const source = await fs.readFile(themeXMLPath, 'utf8').catch(() => '');
+    const source = await readFile(themeXMLPath, 'utf8').catch(() => '');
     if (!source) {
         throw new Error(
             `Could not find theme configuration (theme.xml) for theme at "${themeXMLPath}"`,
@@ -379,5 +379,4 @@ async function getDeployedThemesForVendor(
     );
 }
 
-const safeReaddir = (path: string) =>
-    fs.readdir(path).catch(() => [] as string[]);
+const safeReaddir = (path: string) => readdir(path).catch(() => [] as string[]);
