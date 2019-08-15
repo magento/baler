@@ -4,7 +4,7 @@ import { getThemeHierarchy } from './getThemeHierarchy';
 import { join } from 'path';
 import { log } from './log';
 import { promises as fs } from 'fs';
-import { Theme, StoreData, DeployedTheme } from './types';
+import { Theme, StoreData, DeployedTheme, BundleResult } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate, generateBundleRequireConfig } from './requireConfig';
 import prettyBytes from 'pretty-bytes';
@@ -12,7 +12,10 @@ import prettyBytes from 'pretty-bytes';
 /**
  * @summary Create bundles for multiple deployed themes in pub/static.
  */
-export async function bundleThemes(magentoRoot: string, store: StoreData) {
+export async function bundleThemes(
+    magentoRoot: string,
+    store: StoreData,
+): Promise<BundleResult[]> {
     const { components, deployedThemes } = store;
     const { frontend } = deployedThemes;
 
@@ -37,7 +40,7 @@ async function bundleSingleTheme(
     themeHierarchy: Theme[],
     deployedTheme: DeployedTheme,
     store: StoreData,
-) {
+): Promise<BundleResult> {
     // Note: All work only needs to be done against a single theme, and then
     // copied to each locale. JS should not change between locales
     const [firstLocale] = deployedTheme.locales;
@@ -99,8 +102,9 @@ async function bundleSingleTheme(
     ]);
 
     return {
-        readableBundleSize: prettyBytes(Buffer.from(bundle.bundle).byteLength),
+        totalBundleBytes: Buffer.from(bundle.bundle).byteLength,
         bundleFilename: bundle.bundleFilename,
         bundlePath,
+        themeID: deployedTheme.themeID,
     };
 }

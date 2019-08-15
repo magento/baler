@@ -2,7 +2,8 @@ import { bundleThemes } from '.';
 import { collectStoreData } from './collectStoreData';
 import { log } from './log';
 import { isMagentoRoot } from './magentoFS';
-import { StoreData } from './types';
+import { StoreData, BundleResult } from './types';
+import prettyBytes from 'pretty-bytes';
 
 /**
  * @summary Execute the CLI
@@ -19,7 +20,28 @@ export async function run(cwd: string) {
     exitWithMessageIfNoDeployedThemes(store);
 
     const results = await bundleThemes(cwd, store);
-    console.log(JSON.stringify(results, null, 2));
+    console.log(generateReadableSummary(results));
+}
+
+function generateReadableSummary(results: BundleResult[]): string {
+    const header = [
+        `Finished analyzing and packaging bundles for ${results.length} themes.\n`,
+        `Details:\n\n`,
+    ].join('');
+
+    const themeRows = results
+        .map(r => {
+            return [
+                `Theme: ${r.themeID}\n`,
+                `Bundle File: ${r.bundleFilename}\n`,
+                `Size: ${prettyBytes(
+                    r.totalBundleBytes,
+                )} (raw, not minified)\n`,
+            ].join('');
+        })
+        .join('');
+
+    return `${header}${themeRows}`;
 }
 
 /**
