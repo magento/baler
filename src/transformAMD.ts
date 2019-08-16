@@ -11,7 +11,7 @@ import { Shim } from './types';
  *          boundaries
  */
 export function wrapTextModule(id: string, source: string) {
-    const [before, after] = `define('text!${id}', function() {
+    const [before, after] = `define('${id}', function() {
     return 'SPLIT';
 });`.split('SPLIT');
 

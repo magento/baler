@@ -1,4 +1,4 @@
-import { extname, parse } from 'path';
+import { extname, parse, join } from 'path';
 import { getShimsForModule } from './requireConfig';
 import {
     wrapTextModule,
@@ -8,10 +8,10 @@ import {
     wrapNonShimmedModule,
     renameModule,
 } from './transformAMD';
-import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
 import { readFile } from './fsPromises';
 import { MagentoRequireConfig } from './types';
 import MagicString, { Bundle } from 'magic-string';
+import { createRequireResolver } from './createRequireResolver';
 
 /**
  * @summary Create a bundle file (compatible with the RequireJS runtime)
@@ -34,6 +34,7 @@ export async function createBundleFromDeps(
         source: bundleFilename,
         file: sourcemapFilename,
         includeContent: true,
+        hires: true,
     });
 
     return {
@@ -53,7 +54,8 @@ async function getFinalModuleSource(
     baseDir: string,
     requireConfig: MagentoRequireConfig,
 ) {
-    const path = resolvedModuleIDToPath(dep, baseDir);
+    const resolver = createRequireResolver(requireConfig);
+    const path = join(baseDir, resolver(dep).modulePath);
     const source = await readFile(path, 'utf8');
     const isHTML = extname(path) === '.html';
     const shims = getShimsForModule(dep, requireConfig);

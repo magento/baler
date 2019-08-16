@@ -1,9 +1,7 @@
 import { log } from './log';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { readFile } from './fsPromises';
 import { wrapP } from './wrapP';
-import { resolvedModuleIDToPath } from './resolvedModuleIDToPath';
-import { parseModuleID } from './parseModuleID';
 import {
     MagentoRequireConfig,
     AMDGraph,
@@ -37,23 +35,27 @@ export async function traceAMDDependencies(
     const graph: AMDGraph = {};
     const warnings: TraceResult['warnings'] = [];
 
-    const addDependencyToGraph = (resolvedDepID: string, issuer: string) => {
-        if (graph.hasOwnProperty(resolvedDepID)) return;
-        graph[resolvedDepID] = [];
+    const addDependencyToGraph = (
+        moduleID: string,
+        modulePath: string,
+        issuer: string,
+    ) => {
+        if (graph.hasOwnProperty(moduleID)) return;
+        graph[moduleID] = [];
 
-        const path = resolvedModuleIDToPath(resolvedDepID, baseDir);
+        const path = join(baseDir, modulePath);
         // We're only tracing AMD dependencies. Since a non-JS file
         // can't have dependencies, we can skip the read and parse
         if (extname(path) !== '.js') {
             return;
         }
 
-        toVisit.add(resolvedDepID);
+        toVisit.add(moduleID);
         // the while loop processes things serially,
         // but we kick off file reads as soon as possible
         // so the file is ready when it's time to process
         const read = quietAsyncRejectionWarning(readFile(path, 'utf8'));
-        moduleCache.set(resolvedDepID, {
+        moduleCache.set(moduleID, {
             read,
             path,
             issuer,
@@ -63,37 +65,36 @@ export async function traceAMDDependencies(
     const resolvedEntryIDs: string[] = [];
     // Seed the visitors list with entry points
     entryModuleIDs.forEach(entryID => {
-        const { id, plugin } = parseModuleID(entryID);
-        if (id) {
-            const resolvedEntryID = resolver(id);
-            resolvedEntryIDs.push(resolvedEntryID);
-            addDependencyToGraph(resolvedEntryID, '<entry point>');
-        }
+        const resolved = resolver(entryID);
+        resolvedEntryIDs.push(resolved.moduleID);
+        addDependencyToGraph(
+            resolved.moduleID,
+            resolved.modulePath,
+            '<entry point>',
+        );
 
-        if (plugin) {
-            const resolvedEntryID = resolver(plugin);
-            resolvedEntryIDs.push(resolvedEntryID);
-            addDependencyToGraph(resolvedEntryID, '<entry point>');
+        if (resolved.pluginID) {
+            addDependencyToGraph(
+                resolved.pluginID,
+                resolved.pluginPath,
+                resolved.moduleID,
+            );
         }
     });
 
     // Breadth-first search of the graph
     while (toVisit.size) {
-        const [resolvedID] = toVisit;
-        toVisit.delete(resolvedID);
-        log.debug(`Preparing to read + parse "${resolvedID}"`);
+        const [moduleID] = toVisit;
+        toVisit.delete(moduleID);
+        log.debug(`Preparing to read + parse "${moduleID}"`);
 
-        const { read, path, issuer } = moduleCache.get(
-            resolvedID,
-        ) as CacheEntry;
+        const { read, path, issuer } = moduleCache.get(moduleID) as CacheEntry;
         const [err, source] = await wrapP(read);
         if (err) {
             // Missing files are treated as warnings, rather than hard errors, because
             // a storefront is still usable (will just take a perf hit)
-            warnings.push(
-                unreadableDependencyWarning(resolvedID, path, issuer),
-            );
-            log.debug(`Warning for missing dependency "${resolvedID}"`);
+            warnings.push(unreadableDependencyWarning(moduleID, path, issuer));
+            log.debug(`Warning for missing dependency "${moduleID}"`);
             continue;
         }
 
@@ -102,14 +103,18 @@ export async function traceAMDDependencies(
             log.debug(`Found dependency request for: ${deps.join(', ')}`);
         }
 
-        const mixins = getMixinsForModule(resolvedID, requireConfig).map(
-            mixin => resolver(mixin),
+        const mixins = getMixinsForModule(moduleID, requireConfig).map(
+            mixin => resolver(mixin).moduleID,
         );
 
         mixins.forEach(mixin => {
-            const resolvedMixinID = resolver(mixin);
-            graph[resolvedID].push(resolvedMixinID);
-            addDependencyToGraph(resolvedMixinID, '<mixin>');
+            const resolvedMixin = resolver(mixin);
+            graph[moduleID].push(resolvedMixin.moduleID);
+            addDependencyToGraph(
+                resolvedMixin.moduleID,
+                resolvedMixin.modulePath,
+                '<mixin>',
+            );
         });
 
         deps.forEach(dep => {
@@ -117,22 +122,29 @@ export async function traceAMDDependencies(
                 // We want data about built-in dependencies in the graph,
                 // but we don't want to try to read them from disk, since
                 // they come from the require runtime
-                graph[resolvedID].push(dep);
+                graph[moduleID].push(dep);
                 return;
             }
 
-            const { id, plugin } = parseModuleID(dep);
-
-            if (id) {
-                const resolvedDepID = resolver(id, resolvedID);
-                graph[resolvedID].push(resolvedDepID);
-                addDependencyToGraph(resolvedDepID, resolvedID);
+            const result = resolver(dep, moduleID);
+            // It's possible for a dependency to be a plugin without an argument.
+            // Example: "domReady!"
+            if (result.moduleID) {
+                graph[moduleID].push(result.moduleID);
+                addDependencyToGraph(
+                    result.moduleID,
+                    result.modulePath,
+                    moduleID,
+                );
             }
 
-            if (plugin) {
-                const resolvedPluginID = resolver(plugin);
-                graph[resolvedID].push(resolvedPluginID);
-                addDependencyToGraph(resolvedPluginID, resolvedID);
+            if (result.pluginID) {
+                graph[moduleID].push(result.pluginID);
+                addDependencyToGraph(
+                    result.pluginID,
+                    result.pluginPath,
+                    result.moduleID,
+                );
             }
         });
     }

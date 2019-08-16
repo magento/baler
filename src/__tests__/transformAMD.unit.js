@@ -11,7 +11,7 @@ const {
 } = require('../transformAMD');
 
 test('wrapTextModule transforms HTML to module w/ escaping', () => {
-    const result = wrapTextModule('bar', `<span>Hello World ''"</span>`);
+    const result = wrapTextModule('text!bar', `<span>Hello World ''"</span>`);
     expect(result.toString()).toMatchInlineSnapshot(`
         "define('text!bar', function() {
             return '<span>Hello World \\\\'\\\\'\\"</span>';
