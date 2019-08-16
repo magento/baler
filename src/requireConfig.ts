@@ -85,6 +85,7 @@ export function getShimsForModule(
  *          `requirejs-config.js`, to prevent Require
  *          from going to the network to load modules
  *          that are in-flight inside of a bundle
+ * @todo hardcoded `balerbundles` is also hardcoded in `index.ts`
  */
 export function generateBundleRequireConfig(
     rawConfig: string,
@@ -98,7 +99,7 @@ export function generateBundleRequireConfig(
     // load bundled modules from the network
     require.config({
         bundles: {
-            '${bundleID}': ${JSON.stringify(bundledDeps)}
+            'balerbundles/${bundleID}': ${JSON.stringify(bundledDeps, null, 2)}
         }
     });
 })();
