@@ -1,5 +1,7 @@
 # baler
 
+[![CircleCI](https://circleci.com/gh/DrewML/baler.svg?style=svg)](https://circleci.com/gh/DrewML/baler)
+
 `baler` is an [AMD module](https://requirejs.org/) bundler and preloader for [Magento 2](https://u.magento.com/magento-2) stores.
 
 ## Goals
