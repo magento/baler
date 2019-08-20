@@ -15,10 +15,3 @@
 
 -   [How Does it Work?](docs/HOW_IT_WORKS.md)
 -   [Why a Custom Bundler?](docs/WHY_CUSTOM.md)
-
-## Unfinished Work/TODO
-
-1. Copy bundles to each locale within a deployed theme in `pub/static`
-2. Minify bundles + separate JS source files
-3. Generate preload manifest for backend
-4. Write `Magento_Baler` module for loading core bundle + injecting preload tags
