@@ -4,6 +4,7 @@
 // for any node-based tooling that operates against Magento stores
 
 import { readFile, readdir } from './fsPromises';
+import { Dirent } from 'fs';
 import { join } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
@@ -159,7 +160,7 @@ async function getNonComposerComponents(root: string) {
 
 async function getNonComposerModules(root: string) {
     const codeVendorsDir = join(root, 'app', 'code');
-    const vendors = await safeReaddir(codeVendorsDir);
+    const vendors = await getDirEntriesAtPath(codeVendorsDir);
     if (!vendors.length) return [];
 
     const modules = await Promise.all(
@@ -233,7 +234,7 @@ async function getNonComposerThemesFromVendorInArea(
     area: Theme['area'],
 ): Promise<Theme[]> {
     const vendorPath = join('app', 'design', area, vendor);
-    const themes = await readdir(join(root, vendorPath), 'utf8');
+    const themes = await getDirEntriesAtPath(join(root, vendorPath));
     return Promise.all(
         themes.map(async name => ({
             name,
@@ -380,3 +381,7 @@ async function getDeployedThemesForVendor(
 }
 
 const safeReaddir = (path: string) => readdir(path).catch(() => [] as string[]);
+const getDirEntriesAtPath = (path: string) =>
+    readdir(path, { withFileTypes: true })
+        .then(entries => entries.filter(d => d.isDirectory()).map(d => d.name))
+        .catch(() => [] as string[]);
