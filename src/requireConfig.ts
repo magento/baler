@@ -5,6 +5,16 @@ import { MagentoRequireConfig, Shim } from './types';
 
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 
+/**
+ * @summary Evaluates a Magento RequireJS config, which is
+ *          a file containing `n` successive calls to `require.config`,
+ *          wrapped in IIFEs. Various tricks are necessary to get all
+ *          the pieces of the config that we need.
+ *
+ *          This uses node's `vm` module, which can be incredibly
+ *          expensive. Do _not_ call in a loop. Instead, create
+ *          1 resolver and re-use it
+ */
 export function evaluate(rawConfig: string) {
     try {
         return evaluateRawConfig(rawConfig);
@@ -13,12 +23,6 @@ export function evaluate(rawConfig: string) {
     }
 }
 
-/**
- * @summary Evaluates a Magento RequireJS config, which is
- *          a file containing `n` successive calls to `require.config`,
- *          wrapped in IIFEs. Various tricks are necessary to get all
- *          the pieces of the config that we need
- */
 function evaluateRawConfig(rawConfig: string) {
     log.debug('Evaluating raw "requirejs-config.js"');
 

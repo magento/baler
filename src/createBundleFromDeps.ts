@@ -23,8 +23,11 @@ export async function createBundleFromDeps(
     baseDir: string,
     requireConfig: MagentoRequireConfig,
 ) {
+    const resolver = createRequireResolver(requireConfig);
     const transformedModules = await Promise.all(
-        deps.map(d => getFinalModuleSource(d, baseDir, requireConfig)),
+        deps.map(d =>
+            getFinalModuleSource(d, baseDir, resolver, requireConfig),
+        ),
     );
     const bundle = createBundle(transformedModules);
     bundle.append(`//# sourceMappingURL=${bundleName}.js.map`);
@@ -52,9 +55,9 @@ export async function createBundleFromDeps(
 async function getFinalModuleSource(
     dep: string,
     baseDir: string,
+    resolver: ReturnType<typeof createRequireResolver>,
     requireConfig: MagentoRequireConfig,
 ) {
-    const resolver = createRequireResolver(requireConfig);
     const path = join(baseDir, resolver(dep).modulePath);
     const source = await readFile(path, 'utf8');
     const isHTML = extname(path) === '.html';

@@ -200,24 +200,10 @@ async function getModuleConfig(root: string, path: string): Promise<Module> {
         ignoreNameSpace: true,
     });
 
-    const config = {
+    return {
         moduleID: parsedConfig.config.module.name as string,
-        sequence: [] as string[],
         pathFromStoreRoot: path,
     };
-    const { sequence } = parsedConfig.config.module;
-
-    if (!sequence) return config;
-
-    if (Array.isArray(sequence.module)) {
-        // multiple dependencies
-        config.sequence = sequence.module.map((m: any) => m.name) as string[];
-    } else {
-        // single dependency (the xml parser is weird)
-        config.sequence.push(sequence.module.name);
-    }
-
-    return config;
 }
 
 async function getNonComposerThemes(root: string) {

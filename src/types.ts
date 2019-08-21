@@ -29,7 +29,6 @@ export type Components = {
 
 export type Module = {
     moduleID: string;
-    sequence: string[];
     pathFromStoreRoot: string;
 };
 
