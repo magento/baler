@@ -33,22 +33,10 @@ export type Module = {
     pathFromStoreRoot: string;
 };
 
-export type DeployedTheme = {
-    name: string;
-    vendor: string;
-    themeID: string;
-    area: 'frontend' | 'adminhtml';
-    pathFromStoreRoot: string;
-    locales: string[];
-};
-
 export type StoreData = {
     enabledModules: string[];
     components: Components;
-    deployedThemes: {
-        frontend: DeployedTheme[];
-        adminhtml: DeployedTheme[];
-    };
+    deployedThemes: string[];
 };
 
 export type UnreadableDependencyWarning = {

@@ -4,11 +4,10 @@
 // for any node-based tooling that operates against Magento stores
 
 import { readFile, readdir } from './fsPromises';
-import { Dirent } from 'fs';
 import { join } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
-import { Theme, Components, Module, DeployedTheme, StoreData } from './types';
+import { Theme, Components, Module } from './types';
 import fromEntries from 'fromentries';
 import { parse } from 'fast-xml-parser';
 
@@ -18,7 +17,7 @@ import { parse } from 'fast-xml-parser';
  */
 export async function isMagentoRoot(magentoRoot: string) {
     const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
-    const entries = await readdir(magentoRoot);
+    const entries = await readdir(magentoRoot).catch(() => [] as string[]);
     return EXPECTED_ENTRIES.every(e => entries.includes(e));
 }
 
@@ -83,12 +82,12 @@ export async function getComponents(root: string): Promise<Components> {
  */
 export async function getDeployedThemes(
     magentoRoot: string,
-): Promise<StoreData['deployedThemes']> {
+): Promise<string[]> {
     const staticRoot = join(magentoRoot, 'pub', 'static');
 
     const [frontendVendors, adminVendors] = await Promise.all([
-        safeReaddir(join(staticRoot, 'frontend')),
-        safeReaddir(join(staticRoot, 'adminhtml')),
+        getDirEntriesAtPath(join(staticRoot, 'frontend')),
+        getDirEntriesAtPath(join(staticRoot, 'adminhtml')),
     ]);
 
     const pendingFrontendThemes = Promise.all(
@@ -107,10 +106,7 @@ export async function getDeployedThemes(
         pendingAdminThemes,
     ]);
 
-    return {
-        frontend: flatten(frontendThemes),
-        adminhtml: flatten(adminThemes),
-    };
+    return [...flatten(frontendThemes), ...flatten(adminThemes)];
 }
 
 /**
@@ -150,6 +146,22 @@ export async function getPHTMLFilesEligibleForUseWithTheme(
     });
 }
 
+export async function getLocalesForDeployedTheme(
+    magentoRoot: string,
+    theme: Theme,
+): Promise<string[]> {
+    const themeRoot = join(magentoRoot, getStaticDirForTheme(theme));
+    const dirs = await getDirEntriesAtPath(themeRoot);
+
+    // filter out any extra files/folders that aren't locales
+    const reLang = /^[a-z]{2}(?:_[a-z]{2})?$/i;
+    return dirs.filter(d => reLang.test(d));
+}
+
+export function getStaticDirForTheme(theme: Theme) {
+    return join('pub', 'static', theme.area, theme.vendor, theme.name);
+}
+
 async function getNonComposerComponents(root: string) {
     const [modules, themes] = await Promise.all([
         getNonComposerModules(root),
@@ -165,9 +177,8 @@ async function getNonComposerModules(root: string) {
 
     const modules = await Promise.all(
         vendors.map(async vendor => {
-            const moduleNames = await readdir(
+            const moduleNames = await getDirEntriesAtPath(
                 join(codeVendorsDir, vendor),
-                'utf8',
             );
             return Promise.all(
                 moduleNames.map(mod =>
@@ -211,8 +222,8 @@ async function getModuleConfig(root: string, path: string): Promise<Module> {
 
 async function getNonComposerThemes(root: string) {
     const [frontendVendors, adminVendors] = await Promise.all([
-        safeReaddir(join(root, 'app', 'design', 'frontend')),
-        safeReaddir(join(root, 'app', 'design', 'adminhtml')),
+        getDirEntriesAtPath(join(root, 'app', 'design', 'frontend')),
+        getDirEntriesAtPath(join(root, 'app', 'design', 'adminhtml')),
     ]);
 
     const pendingFrontend = frontendVendors.map(vendor =>
@@ -341,46 +352,20 @@ async function getThemeParentName(themePath: string) {
     return parent;
 }
 
-async function getLocalesForDeployedTheme(
-    magentoRoot: string,
-    area: 'frontend' | 'adminhtml',
-    vendor: string,
-    name: string,
-): Promise<string[]> {
-    const themeRoot = join(magentoRoot, 'pub', 'static', area, vendor, name);
-    const dirs = await safeReaddir(themeRoot);
-
-    // filter out any extra files/folders that aren't locales
-    const reLang = /^[a-z]{2}(?:_[a-z]{2})?$/i;
-    return dirs.filter(d => reLang.test(d));
-}
-
 async function getDeployedThemesForVendor(
     magentoRoot: string,
     area: 'frontend' | 'adminhtml',
     vendor: string,
-): Promise<DeployedTheme[]> {
+): Promise<string[]> {
     const vendorPath = join('pub', 'static', area, vendor);
-    const themeNames = await safeReaddir(join(magentoRoot, vendorPath));
-    // TODO: Filter non-theme dirs (example: hidden dot dirs)
-    return Promise.all(
-        themeNames.map(async name => ({
-            vendor,
-            name,
-            themeID: `${vendor}/${name}`,
-            area,
-            pathFromStoreRoot: join(vendorPath, name),
-            locales: await getLocalesForDeployedTheme(
-                magentoRoot,
-                area,
-                vendor,
-                name,
-            ),
-        })),
+    const vendorEntries = await getDirEntriesAtPath(
+        join(magentoRoot, vendorPath),
     );
+    const themeNames = vendorEntries.filter(e => /^[a-zA-Z0-9-_]+$/.test(e));
+
+    return themeNames.map(name => `${vendor}/${name}`);
 }
 
-const safeReaddir = (path: string) => readdir(path).catch(() => [] as string[]);
 const getDirEntriesAtPath = (path: string) =>
     readdir(path, { withFileTypes: true })
         .then(entries => entries.filter(d => d.isDirectory()).map(d => d.name))

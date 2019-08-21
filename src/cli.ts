@@ -53,15 +53,16 @@ function generateReadableSummary(results: BundleResult[]): string {
  *          with an error
  */
 function exitWithMessageIfNoDeployedThemes(store: StoreData): void {
-    const { frontend } = store.deployedThemes;
-    const eligibleDeployedThemes = frontend.filter(
-        t => t.themeID !== 'Magento/blank',
-    );
-    if (eligibleDeployedThemes.length) return;
-
-    const allThemeNames = Object.values(store.components.themes)
+    const { deployedThemes, components } = store;
+    const allThemeNames = Object.values(components.themes)
         .filter(t => t.area === 'frontend' && t.themeID !== 'Magento/blank')
         .map(t => t.themeID);
+    const eligibleDeployedThemes = allThemeNames.filter(id =>
+        deployedThemes.includes(id),
+    );
+
+    if (eligibleDeployedThemes.length) return;
+
     log.error(
         "No deployed frontend theme(s) were found in your store's static directory, " +
             'but the following are installed in your store:\n' +

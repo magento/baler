@@ -1,13 +1,13 @@
 import { createBundleFromDeps } from './createBundleFromDeps';
 import { computeDepsForBundle } from './computeDepsForBundle';
 import { getThemeHierarchy } from './getThemeHierarchy';
+import { getLocalesForDeployedTheme, getStaticDirForTheme } from './magentoFS';
 import { join } from 'path';
 import { log } from './log';
 import { readFile, mkdir, writeFile } from './fsPromises';
-import { Theme, StoreData, DeployedTheme, BundleResult } from './types';
+import { Theme, StoreData, BundleResult } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate, generateBundleRequireConfig } from './requireConfig';
-import prettyBytes from 'pretty-bytes';
 
 /**
  * @summary Create bundles for multiple deployed themes in pub/static.
@@ -17,19 +17,21 @@ export async function bundleThemes(
     store: StoreData,
 ): Promise<BundleResult[]> {
     const { components, deployedThemes } = store;
-    const { frontend } = deployedThemes;
 
-    const themesToBundle = frontend.filter(t => t.themeID !== 'Magento/blank');
+    const pendingBundleResults: ReturnType<typeof bundleSingleTheme>[] = [];
+    for (const themeID of deployedThemes) {
+        const theme = components.themes[themeID];
+        if (theme.area !== 'frontend' || theme.themeID === 'Magento/blank') {
+            continue;
+        }
 
-    const bundleResults = await Promise.all(
-        themesToBundle.map(t => {
-            const theme = components.themes[t.themeID];
-            const themeHierarchy = getThemeHierarchy(theme, components.themes);
-            return bundleSingleTheme(magentoRoot, themeHierarchy, t, store);
-        }),
-    );
+        const themeHierarchy = getThemeHierarchy(theme, components.themes);
+        pendingBundleResults.push(
+            bundleSingleTheme(magentoRoot, theme, themeHierarchy, store),
+        );
+    }
 
-    return bundleResults;
+    return Promise.all(pendingBundleResults);
 }
 
 /**
@@ -37,17 +39,18 @@ export async function bundleThemes(
  */
 async function bundleSingleTheme(
     magentoRoot: string,
+    theme: Theme,
     themeHierarchy: Theme[],
-    deployedTheme: DeployedTheme,
     store: StoreData,
 ): Promise<BundleResult> {
+    const locales = await getLocalesForDeployedTheme(magentoRoot, theme);
     // Note: All work only needs to be done against a single theme, and then
     // copied to each locale. JS should not change between locales
-    const [firstLocale] = deployedTheme.locales;
+    const [firstLocale] = locales;
     log.debug(
-        `Begin bundling theme "${deployedTheme.vendor}/${deployedTheme.name}", using locale "${firstLocale}" as the source`,
+        `Begin bundling theme "${theme.themeID}", using locale "${firstLocale}" as the source`,
     );
-    const firstLocaleRoot = join(deployedTheme.pathFromStoreRoot, firstLocale);
+    const firstLocaleRoot = join(getStaticDirForTheme(theme), firstLocale);
     const requireConfigPath = join(
         magentoRoot,
         firstLocaleRoot,
@@ -60,7 +63,7 @@ async function bundleSingleTheme(
 
     if (!Array.isArray(configEntryPoints)) {
         throw new Error(
-            `Could not find entry point(s) using "deps" in "requirejs-config.js" for theme ${deployedTheme.vendor}/${deployedTheme.name}`,
+            `Could not find entry point(s) using "deps" in "requirejs-config.js" for theme ${theme.themeID}`,
         );
     }
 
@@ -102,7 +105,7 @@ async function bundleSingleTheme(
         totalBundleBytes: Buffer.from(bundle.bundle).byteLength,
         bundleFilename: bundle.bundleFilename,
         bundlePath,
-        themeID: deployedTheme.themeID,
+        themeID: theme.themeID,
         deps,
     };
 }
