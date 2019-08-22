@@ -1,3 +1,4 @@
+import { log } from './log';
 import { extname, parse, join } from 'path';
 import { getShimsForModule } from './requireConfig';
 import {
@@ -48,10 +49,6 @@ export async function createBundleFromDeps(
     };
 }
 
-/**
- * @todo Warn user when shim configs are found for a module
- *      that's already an AMD module
- */
 async function getFinalModuleSource(
     dep: string,
     baseDir: string,
@@ -71,6 +68,23 @@ async function getFinalModuleSource(
 
     if (isNamed) {
         return { dep, file: new MagicString(source) };
+    }
+
+    if (hasDefine && shims) {
+        // Note from the RequireJS docs:
+        //      "Remember: only use shim config for non-AMD scripts,
+        //      scripts that do not already call define(). The shim
+        //      config will not work correctly if used on AMD scripts,
+        //      in particular, the exports and init config will not
+        //      be triggered, and the deps config will be confusing
+        //      for those cases."
+        // - https://requirejs.org/docs/api.html#config-shim
+        log.warn(
+            `Found shim configuration for "${dep}", but it ` +
+                'is already an AMD module. RequireJS does not support ' +
+                'shimming AMD modules. You may see unexpected behavior ' +
+                'as a result.',
+        );
     }
 
     if (!hasDefine) {
