@@ -31,12 +31,9 @@ export async function createBundleFromDeps(
         ),
     );
     const bundle = createBundle(transformedModules);
-    bundle.append(`//# sourceMappingURL=${bundleName}.js.map`);
     const bundleFilename = `${parse(bundleName).name}.js`;
-    const sourcemapFilename = `${bundleFilename}.map`;
     const sourcemap = bundle.generateMap({
         source: bundleFilename,
-        file: sourcemapFilename,
         includeContent: true,
         hires: true,
     });
@@ -44,8 +41,7 @@ export async function createBundleFromDeps(
     return {
         bundleFilename,
         bundle: bundle.toString(),
-        sourcemapFilename,
-        sourcemap: sourcemap.toString(),
+        map: sourcemap.toString(),
     };
 }
 

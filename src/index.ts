@@ -8,6 +8,7 @@ import { readFile, mkdir, writeFile } from './fsPromises';
 import { Theme, StoreData, BundleResult } from './types';
 import { traceAMDDependencies } from './traceAMDDependencies';
 import { evaluate, generateBundleRequireConfig } from './requireConfig';
+import { createMinifier } from './createMinifier';
 
 /**
  * @summary Create bundles for multiple deployed themes in pub/static.
@@ -17,6 +18,7 @@ export async function bundleThemes(
     store: StoreData,
 ): Promise<BundleResult[]> {
     const { components, deployedThemes } = store;
+    const minifier = createMinifier();
 
     const pendingBundleResults: ReturnType<typeof bundleSingleTheme>[] = [];
     for (const themeID of deployedThemes) {
@@ -27,11 +29,19 @@ export async function bundleThemes(
 
         const themeHierarchy = getThemeHierarchy(theme, components.themes);
         pendingBundleResults.push(
-            bundleSingleTheme(magentoRoot, theme, themeHierarchy, store),
+            bundleSingleTheme(
+                magentoRoot,
+                theme,
+                themeHierarchy,
+                store,
+                minifier,
+            ),
         );
     }
 
-    return Promise.all(pendingBundleResults);
+    const results = await Promise.all(pendingBundleResults);
+    minifier.destroy();
+    return results;
 }
 
 /**
@@ -42,6 +52,7 @@ async function bundleSingleTheme(
     theme: Theme,
     themeHierarchy: Theme[],
     store: StoreData,
+    minifier: ReturnType<typeof createMinifier>,
 ): Promise<BundleResult> {
     const locales = await getLocalesForDeployedTheme(magentoRoot, theme);
     // Note: All work only needs to be done against a single theme, and then
@@ -91,10 +102,17 @@ async function bundleSingleTheme(
 
     const bundleDir = join(firstLocaleRoot, 'balerbundles');
     await mkdir(bundleDir, { recursive: true });
+
+    const minifiedBundle = await minifier.minifyFromString(
+        bundle.bundle,
+        bundle.bundleFilename,
+        bundle.map,
+    );
     const bundlePath = join(bundleDir, bundle.bundleFilename);
+    const mapPath = join(bundleDir, `${bundle.bundleFilename}.map`);
     await Promise.all([
-        writeFile(bundlePath, bundle.bundle),
-        writeFile(join(bundleDir, bundle.sourcemapFilename), bundle.sourcemap),
+        writeFile(bundlePath, minifiedBundle.code),
+        writeFile(mapPath, minifiedBundle.map),
         writeFile(
             join(firstLocaleRoot, 'requirejs-bundle-config.js'),
             newRequireConfig,

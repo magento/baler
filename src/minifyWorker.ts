@@ -13,6 +13,14 @@ type StringMinificationResult = {
     map?: string;
 };
 
+// The RequireJS runtime, in some cases
+// relies on Function.prototype.toString
+// to find calls to `require`. These must
+// be preserved
+const mangleOptions = {
+    reserved: ['require'],
+};
+
 /**
  * @summary Minifies JS code, optionally chaining from
  *          a provided source-map
@@ -27,6 +35,7 @@ export async function minifyFromString(
             filename,
             url: `${filename}.map`,
         },
+        mangle: mangleOptions,
     };
 
     if (map) {
@@ -69,7 +78,7 @@ async function minifyWithoutInputMap(
     targetFilename: string,
     targetFilePath: string,
 ) {
-    const result = terser.minify(source);
+    const result = terser.minify(source, { mangle: mangleOptions });
     if (result.error) throw result.error;
     await writeFile(targetFilePath, result.code);
     return {
@@ -101,6 +110,7 @@ async function minifyWithInputMap(
             content: map,
             url: sourceMapName,
         },
+        mangle: mangleOptions,
     });
 
     if (result.error) throw result.error;
