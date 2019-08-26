@@ -1,15 +1,51 @@
 import { join, parse, dirname } from 'path';
 import { readFile, writeFile } from './fsPromises';
-import terser from 'terser';
-import { RawSourceMap } from 'source-map';
+import terser, { MinifyOptions, SourceMapOptions } from 'terser';
 import { wrapP } from './wrapP';
 
-export type MinificationResult = {
+type FileMinificationResult = {
     totalBytes: number;
     minFilename: string;
 };
 
-export async function minify(path: string): Promise<MinificationResult> {
+type StringMinificationResult = {
+    code: string;
+    map?: string;
+};
+
+/**
+ * @summary Minifies JS code, optionally chaining from
+ *          a provided source-map
+ */
+export async function minifyFromString(
+    code: string,
+    filename: string,
+    map?: string,
+): Promise<StringMinificationResult> {
+    const opts: MinifyOptions = {
+        sourceMap: {
+            filename,
+            url: `${filename}.map`,
+        },
+    };
+
+    if (map) {
+        try {
+            const parsedMap = JSON.parse(map) as SourceMapOptions['content'];
+            // @ts-ignore
+            opts.sourceMap.content = parsedMap;
+        } catch {}
+    }
+
+    const result = terser.minify(code, opts);
+    if (result.error) throw result.error;
+
+    return { code: result.code as string, map: result.map };
+}
+
+export async function minifyFromFilepath(
+    path: string,
+): Promise<FileMinificationResult> {
     const source = await readFile(path, 'utf8');
     const { 1: sourceMapName } =
         source.match(/\/\/#\ssourceMappingURL=(.+\.js\.map)/) || [];
@@ -59,7 +95,7 @@ async function minifyWithInputMap(
         return minifyWithoutInputMap(source, targetFilename, targetFilePath);
     }
 
-    const map = JSON.parse(mapSrc as string) as RawSourceMap;
+    const map = JSON.parse(mapSrc as string) as SourceMapOptions['content'];
     const result = terser.minify(source, {
         sourceMap: {
             content: map,
