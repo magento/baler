@@ -3,7 +3,7 @@
 // break this out to a separately-published module. It will be useful
 // for any node-based tooling that operates against Magento stores
 
-import { readFile, readdir } from './fsPromises';
+import { readFile, readdir, access } from './fsPromises';
 import { join } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
@@ -201,7 +201,8 @@ async function getNonComposerModules(root: string) {
 }
 
 async function getModuleConfig(root: string, path: string): Promise<Module> {
-    const configPath = join(root, path, 'etc', 'module.xml');
+    const realModuleRoot = await findRealModuleRoot(root, path);
+    const configPath = join(root, realModuleRoot, 'etc', 'module.xml');
     const rawConfig = await readFile(configPath, 'utf8');
     const parsedConfig = parse(rawConfig, {
         ignoreAttributes: false,
@@ -211,8 +212,44 @@ async function getModuleConfig(root: string, path: string): Promise<Module> {
 
     return {
         moduleID: parsedConfig.config.module.name as string,
-        pathFromStoreRoot: path,
+        pathFromStoreRoot: realModuleRoot,
     };
+}
+
+/**
+ * @summary It's possible for the sources of data we care about in
+ *          a module (etc dir, view dir, etc) to not be in the root
+ *          of the package. The "real" root we need is in Magento
+ *          inside registration.php, but it's not safe to try and parse
+ *          that out. Instead, we'll try to find `module.xml` by
+ *          scanning, since one level up from that will always
+ *          be the real root we care about
+ */
+async function findRealModuleRoot(magentoRoot: string, path: string) {
+    const typicalPath = join(path, 'etc', 'module.xml');
+    try {
+        // Fast path: check the typical location first to avoid a dir scan
+        await access(join(magentoRoot, typicalPath));
+        return path;
+    } catch {}
+
+    const matches = await glob('**/etc/module.xml', {
+        cwd: join(magentoRoot, path),
+    });
+
+    if (!matches.length) {
+        throw new Error(
+            `Unable to locate "module.xml" for the module at path "${path}"`,
+        );
+    }
+
+    if (matches.length > 1) {
+        throw new Error(
+            `Found > 1 "module.xml" for the module at path "${path}"`,
+        );
+    }
+
+    return join(path, matches[0], '../..');
 }
 
 async function getNonComposerThemes(root: string) {

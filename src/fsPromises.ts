@@ -13,3 +13,4 @@ export const mkdir = promisify(fs.mkdir);
 export const writeFile = promisify(fs.writeFile);
 export const readdir = promisify(fs.readdir);
 export const copyFile = promisify(fs.copyFile);
+export const access = promisify(fs.access);
