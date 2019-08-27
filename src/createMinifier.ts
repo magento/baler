@@ -1,11 +1,7 @@
 import Worker from 'jest-worker';
 import * as minifyWorker from './minifyWorker';
 
-export type Minifier = {
-    minifyFromFilepath: typeof minifyWorker.minifyFromFilepath;
-    minifyFromString: typeof minifyWorker.minifyFromString;
-    destroy(): void;
-};
+export type Minifier = ReturnType<typeof createMinifier>;
 
 export function createMinifier() {
     const worker = (new Worker(require.resolve('./minifyWorker'), {
