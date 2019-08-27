@@ -1,4 +1,4 @@
-import { bundleThemes } from '.';
+import { optimizeThemes } from './optimizeThemes';
 import { collectStoreData } from './collectStoreData';
 import { log } from './log';
 import { isMagentoRoot } from './magentoFS';
@@ -19,29 +19,8 @@ export async function run(cwd: string) {
     const store = await collectStoreData(cwd);
     exitWithMessageIfNoDeployedThemes(store);
 
-    const results = await bundleThemes(cwd, store);
-    console.log(generateReadableSummary(results));
-}
-
-function generateReadableSummary(results: BundleResult[]): string {
-    const header = [
-        chalk.green(
-            `Finished analyzing and packaging bundles for ${results.length} theme(s).\n`,
-        ),
-        `Details:\n\n`,
-    ].join('');
-
-    const themeRows = results
-        .map(r => {
-            return [
-                `Theme: ${r.themeID}\n`,
-                `Bundle File: ${r.bundleFilename}\n`,
-                `Module Count: ${r.deps.length}`,
-            ].join('');
-        })
-        .join('');
-
-    return `${header}${themeRows}`;
+    const results = await optimizeThemes(cwd, store, ['Magento/luma']);
+    console.log(JSON.stringify(results, null, 2));
 }
 
 /**

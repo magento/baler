@@ -10,7 +10,7 @@ type FileMinificationResult = {
 
 type StringMinificationResult = {
     code: string;
-    map?: string;
+    map: string;
 };
 
 // The RequireJS runtime, in some cases
@@ -49,7 +49,7 @@ export async function minifyFromString(
     const result = terser.minify(code, opts);
     if (result.error) throw result.error;
 
-    return { code: result.code as string, map: result.map };
+    return { code: result.code as string, map: result.map as string };
 }
 
 export async function minifyFromFilepath(

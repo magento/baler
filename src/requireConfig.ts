@@ -1,6 +1,8 @@
 import vm from 'vm';
+import { join } from 'path';
 import { log } from './log';
 import { readFileSync } from 'fs';
+import { readFile } from './fsPromises';
 import { MagentoRequireConfig, Shim } from './types';
 
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
@@ -108,4 +110,17 @@ export function generateBundleRequireConfig(
     });
 })();
 ${rawConfig}`;
+}
+
+export async function getRequireConfigFromDir(path: string) {
+    const filepath = join(path, 'requirejs-config.js');
+    try {
+        const rawRequireConfig = await readFile(filepath, 'utf8');
+        const requireConfig = evaluateRawConfig(rawRequireConfig);
+        return { rawRequireConfig, requireConfig };
+    } catch {
+        throw new Error(
+            `Failed reading or evaluating RequireJS config at path "${path}"`,
+        );
+    }
 }

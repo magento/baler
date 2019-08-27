@@ -1,7 +1,11 @@
 import Worker from 'jest-worker';
 import * as minifyWorker from './minifyWorker';
 
-type Minifier = typeof minifyWorker & InstanceType<typeof Worker>;
+export type Minifier = {
+    minifyFromFilepath: typeof minifyWorker.minifyFromFilepath;
+    minifyFromString: typeof minifyWorker.minifyFromString;
+    destroy(): void;
+};
 
 export function createMinifier() {
     const worker = (new Worker(require.resolve('./minifyWorker'), {
@@ -9,7 +13,7 @@ export function createMinifier() {
             // surface console.log and friends in worker
             stdio: 'inherit',
         },
-    }) as unknown) as Minifier;
+    }) as unknown) as typeof minifyWorker & InstanceType<typeof Worker>;
 
     return {
         minifyFromFilepath: worker.minifyFromFilepath,
