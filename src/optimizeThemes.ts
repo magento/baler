@@ -22,19 +22,30 @@ export async function optimizeThemes(
     store: StoreData,
     themesToOptimize: string[],
 ) {
+    // Spins up a worker pool, so we only want to do it once, not per-theme
     const minifier = createMinifier();
 
-    const pendingThemeResults = themesToOptimize.map(themeID => {
+    const pendingThemeResults = themesToOptimize.map(async themeID => {
         const theme = getThemeByID(themeID, store.components.themes);
         throwOnDisallowedTheme(theme);
 
-        return optimizeTheme(magentoRoot, store, theme, minifier);
+        try {
+            const result = await optimizeTheme(
+                magentoRoot,
+                store,
+                theme,
+                minifier,
+            );
+            return { themeID, success: true, result };
+        } catch (error) {
+            return { themeID, success: false, error };
+        }
     });
 
-    // TODO: Promise.allSettled
-    const results = await Promise.all(pendingThemeResults);
+    const themeResults = await Promise.all(pendingThemeResults);
     minifier.destroy();
-    return results;
+
+    return themeResults;
 }
 
 /**
@@ -56,6 +67,9 @@ async function optimizeTheme(
     return coreBundleResults;
 }
 
+/**
+ * @summary Creates and writes the core bundle file for a given theme
+ */
 async function createCoreBundle(
     magentoRoot: string,
     theme: Theme,
@@ -98,7 +112,7 @@ async function createCoreBundle(
         ),
     ]);
 
-    const files: WritableThemeFile[] = [
+    const files = [
         {
             pathFromLocaleRoot: join(BALER_META_DIR, bundleFilename),
             source: minifiedCoreBundle.code,
@@ -117,36 +131,27 @@ async function createCoreBundle(
         },
     ];
 
-    const results = await writeFilesToAllLocales(
-        magentoRoot,
-        theme,
-        files,
-        deployedLocales,
-    );
-    const failedWrites = results.filter(r => !r.success).map(r => r.file);
+    await writeFilesToAllLocales(magentoRoot, theme, files, deployedLocales);
 
     return {
         baseLocale: firstLocale,
         entryPoints: resolvedEntryIDs,
         graph,
-        coreBundleBytesBeforeMin: Buffer.from(bundle).byteLength,
-        coreBundleBytesAfterMin: Buffer.from(minifiedCoreBundle.code)
-            .byteLength,
-        requireConfigBytesBeforeMin: Buffer.from(rawRequireConfig).byteLength,
-        requireConfigBytesAfterMin: Buffer.from(minifiedRequireConfig.code)
-            .byteLength,
-        failedWrites,
+        coreBundleSizes: {
+            beforeMin: Buffer.from(bundle).byteLength,
+            afterMin: Buffer.from(minifiedCoreBundle.code).byteLength,
+        },
+        requireConfigSizes: {
+            beforeMin: Buffer.from(rawRequireConfig).byteLength,
+            afterMin: Buffer.from(minifiedRequireConfig.code).byteLength,
+        },
     };
 }
 
-type WritableThemeFile = {
-    pathFromLocaleRoot: string;
-    source: string;
-};
 async function writeFilesToAllLocales(
     magentoRoot: string,
     theme: Theme,
-    files: WritableThemeFile[],
+    files: { pathFromLocaleRoot: string; source: string }[],
     locales: string[],
 ) {
     const staticDir = getStaticDirForTheme(theme);
@@ -160,18 +165,12 @@ async function writeFilesToAllLocales(
                     locale,
                     file.pathFromLocaleRoot,
                 );
-                try {
-                    await writeFileWithMkDir(path, file.source);
-                    return { success: true, file, locale };
-                } catch {
-                    return { success: false, file, locale };
-                }
+                await writeFileWithMkDir(path, file.source);
             });
         }),
     );
 
-    const writeResults = await Promise.all(pendingWrites);
-    return writeResults;
+    await Promise.all(pendingWrites);
 }
 
 async function writeFileWithMkDir(path: string, source: string) {

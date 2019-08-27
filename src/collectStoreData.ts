@@ -7,7 +7,7 @@ import { StoreData } from './types';
 
 /**
  * @summary Collect (in parallel) all the data needed up-front for
- *          bundling
+ *          optimization
  */
 export async function collectStoreData(
     magentoRoot: string,

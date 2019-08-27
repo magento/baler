@@ -2,8 +2,7 @@ import { optimizeThemes } from './optimizeThemes';
 import { collectStoreData } from './collectStoreData';
 import { log } from './log';
 import { isMagentoRoot } from './magentoFS';
-import { StoreData, BundleResult } from './types';
-import chalk from 'chalk';
+import { StoreData } from './types';
 
 /**
  * @summary Execute the CLI
