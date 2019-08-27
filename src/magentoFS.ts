@@ -10,15 +10,19 @@ import { flatten } from './flatten';
 import { Theme, Components, Module } from './types';
 import fromEntries from 'fromentries';
 import { parse } from 'fast-xml-parser';
+import { findUp } from './findUp';
 
 /**
  * @summary Hacky but functional validation that a directory is the
  *          root of a Magento 2 installation
  */
-export async function isMagentoRoot(magentoRoot: string) {
+export async function findMagentoRoot(dir: string) {
     const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
-    const entries = await readdir(magentoRoot).catch(() => [] as string[]);
-    return EXPECTED_ENTRIES.every(e => entries.includes(e));
+    const predicate = (dir: string, entries: string[]) => {
+        return EXPECTED_ENTRIES.every(e => entries.includes(e));
+    };
+
+    return findUp(dir, predicate);
 }
 
 /**
@@ -159,7 +163,12 @@ export async function getLocalesForDeployedTheme(
 }
 
 export function getStaticDirForTheme(theme: Theme) {
-    return join('pub', 'static', theme.area, theme.vendor, theme.name);
+    // Can't use `vendor` prop from Theme, because the casing
+    // might be different. Magento always uses the theme ID when
+    // writing to `pub/static`. We have to split here, though,
+    // so that *nix path separators don't make it in (need windows compat)
+    const [vendor, name] = theme.themeID.split('/');
+    return join('pub', 'static', theme.area, vendor, name);
 }
 
 async function getNonComposerComponents(root: string) {

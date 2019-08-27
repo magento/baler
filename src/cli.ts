@@ -1,24 +1,26 @@
 import { optimizeThemes } from './optimizeThemes';
 import { collectStoreData } from './collectStoreData';
 import { log } from './log';
-import { isMagentoRoot } from './magentoFS';
+import { findMagentoRoot } from './magentoFS';
 import { StoreData } from './types';
 
 /**
  * @summary Execute the CLI
  */
 export async function run(cwd: string) {
-    if (!(await isMagentoRoot(cwd))) {
-        log.error(
-            'baler must be run from the root of a Magento 2 installation',
-        );
+    const magentoRoot = await findMagentoRoot(cwd);
+    if (!magentoRoot) {
+        log.error('Could not find a Magento 2 installation');
         process.exit(1);
+        // Shutting up TypeScript, which doesn't know that
+        // process.exit halts execution
+        throw void 0;
     }
 
-    const store = await collectStoreData(cwd);
+    const store = await collectStoreData(magentoRoot);
     exitWithMessageIfNoDeployedThemes(store);
 
-    const results = await optimizeThemes(cwd, store, ['Magento/luma']);
+    const results = await optimizeThemes(magentoRoot, store, ['Magento/luma']);
     console.log(JSON.stringify(results, null, 2));
 }
 

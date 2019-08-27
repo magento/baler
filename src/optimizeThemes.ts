@@ -79,8 +79,13 @@ async function createCoreBundle(
         magentoRoot,
         theme,
     );
+
     const [firstLocale] = deployedLocales;
-    const firstLocaleRoot = join(getStaticDirForTheme(theme), firstLocale);
+    const firstLocaleRoot = join(
+        magentoRoot,
+        getStaticDirForTheme(theme),
+        firstLocale,
+    );
 
     const { requireConfig, rawRequireConfig } = await getRequireConfigFromDir(
         firstLocaleRoot,

@@ -38,7 +38,7 @@ As this project is still under heavy development, releases are not being publish
 
 ### Usage
 
-1. In a terminal, in the root directory for a Magento 2 installation, run `baler`. No configuration is needed
+1. In a terminal, in either the root or a subdirectory of a Magento 2 installation, run `baler`. No configuration is needed
 
 ### Debugging
 
