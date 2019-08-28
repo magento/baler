@@ -378,8 +378,7 @@ async function getThemeParentName(themePath: string) {
             `Could not find theme configuration (theme.xml) for theme at "${themeXMLPath}"`,
         );
     }
-    // Note: Skipping a full blown XML parser (for now) to maintain speed.
-    // Sander will hate me :D
+    // TODO: switch to the `fast-xml` parser already in use in this file - it's fast!
     const [, parent = ''] = source!.match(/<parent>(.+)<\/parent>/) || [];
     return parent;
 }

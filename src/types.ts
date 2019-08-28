@@ -52,11 +52,3 @@ export type TraceResult = {
 };
 
 export type Shim = Omit<RequireShim, 'init'>;
-
-export type BundleResult = {
-    totalBundleBytes: number;
-    bundleFilename: string;
-    bundlePath: string;
-    themeID: string;
-    deps: string[];
-};
