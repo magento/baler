@@ -1,6 +1,5 @@
 import { optimizeThemes } from './optimizeThemes';
 import { collectStoreData } from './collectStoreData';
-import { log } from './log';
 import { findMagentoRoot } from './magentoFS';
 import { StoreData } from './types';
 
@@ -27,8 +26,7 @@ export async function run(cwd: string) {
     }
 
     const results = await optimizeThemes(magentoRoot, store, themesToOptimize);
-    const { graph, ...rest } = results[0].result!;
-    console.log(JSON.stringify(rest, null, 2));
+    console.log(JSON.stringify(results, null, 2));
 }
 
 function getSupportedAndDeployedThemeIDs(store: StoreData): string[] {
