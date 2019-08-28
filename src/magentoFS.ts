@@ -1,16 +1,12 @@
-// Note: Most of the code for this module is copypasta from the
-// `scd` project. When both are released and supported, we should
-// break this out to a separately-published module. It will be useful
-// for any node-based tooling that operates against Magento stores
-
 import { readFile, readdir, access } from './fsPromises';
-import { join } from 'path';
+import { join, parse } from 'path';
 import glob from 'fast-glob';
 import { flatten } from './flatten';
 import { Theme, Components, Module } from './types';
 import fromEntries from 'fromentries';
-import { parse } from 'fast-xml-parser';
+import { parse as parseXML } from 'fast-xml-parser';
 import { findUp } from './findUp';
+import { parseThemeIDFromRegistration } from './parseThemeIDFromRegistration';
 
 /**
  * @summary Hacky but functional validation that a directory is the
@@ -200,11 +196,14 @@ async function getNonComposerModules(root: string) {
     return flatten(modules);
 }
 
+/**
+ * @summary Read and parse select bits of data from a module's "module.xml"
+ */
 async function getModuleConfig(root: string, path: string): Promise<Module> {
     const realModuleRoot = await findRealModuleRoot(root, path);
     const configPath = join(root, realModuleRoot, 'etc', 'module.xml');
     const rawConfig = await readFile(configPath, 'utf8');
-    const parsedConfig = parse(rawConfig, {
+    const parsedConfig = parseXML(rawConfig, {
         ignoreAttributes: false,
         attributeNamePrefix: '',
         ignoreNameSpace: true,
@@ -252,6 +251,9 @@ async function findRealModuleRoot(magentoRoot: string, path: string) {
     return join(path, matches[0], '../..');
 }
 
+/**
+ * @summary Get a collection of all themes in app/design
+ */
 async function getNonComposerThemes(root: string) {
     const [frontendVendors, adminVendors] = await Promise.all([
         getDirEntriesAtPath(join(root, 'app', 'design', 'frontend')),
@@ -271,6 +273,10 @@ async function getNonComposerThemes(root: string) {
     return [...frontendThemes, ...adminThemes];
 }
 
+/**
+ * @summary Get a collection of all themes for a single vendor
+ *          in a single area (frontend/adminhtml)
+ */
 async function getNonComposerThemesFromVendorInArea(
     root: string,
     vendor: string,
@@ -301,10 +307,16 @@ type ComposerLock = {
     }[];
 };
 
-async function getComposerComponents(root: string) {
-    const lockfile = await readFile(join(root, 'composer.lock'), 'utf8').catch(
-        () => '',
-    );
+/**
+ * @summary Get a collection of all themes and (Magento) modules
+ *          installed with composer, using `composer.lock` as a
+ *          source of data
+ */
+async function getComposerComponents(magentoRoot: string) {
+    const lockfile = await readFile(
+        join(magentoRoot, 'composer.lock'),
+        'utf8',
+    ).catch(() => '');
     // Composer lock file isn't a requirement if you're
     // not using composer
     if (!lockfile) {
@@ -320,11 +332,13 @@ async function getComposerComponents(root: string) {
     for (const { name, type } of composerLock.packages) {
         if (type === 'magento2-module') {
             const modulePath = join('vendor', name);
-            pendingModules.push(getModuleConfig(root, modulePath));
+            pendingModules.push(getModuleConfig(magentoRoot, modulePath));
         }
 
         if (type === 'magento2-theme') {
-            pendingThemes.push(getThemeFromComposerName(root, name));
+            pendingThemes.push(
+                getThemeFromComposerPkg(join(magentoRoot, 'vendor', name)),
+            );
         }
     }
 
@@ -334,40 +348,81 @@ async function getComposerComponents(root: string) {
     };
 }
 
-async function getThemeFromComposerName(
-    root: string,
-    pkgName: string,
-): Promise<Theme> {
-    const [vendor, pieces] = pkgName.split('/');
-    const [firstPart, area, themeName] = pieces.split('-');
-    if (
-        firstPart !== 'theme' ||
-        (area !== 'frontend' && area !== 'adminhtml')
-    ) {
+/**
+ * @summary Get theme details for a single theme installed with composer
+ */
+async function getThemeFromComposerPkg(pkgRoot: string): Promise<Theme> {
+    const {
+        rawRegistration,
+        registrationPHPPath,
+    } = await getRegistrationPHPForComposerPkg(pkgRoot);
+
+    const themeData = parseThemeIDFromRegistration(
+        rawRegistration,
+        registrationPHPPath,
+    );
+
+    if (!themeData) {
         throw new Error(
-            `Unrecognized theme package name: ${pkgName}. ` +
-                'The format "<vendor>/theme-<area>-<name>" must be used.',
+            "Could not determine a theme's ID by analyzing " +
+                `"${registrationPHPPath}". Baler uses static analysis ` +
+                'to partially evaluate PHP, but it is not perfect. Please ' +
+                'file a new issue on Github',
         );
     }
-    const pathFromStoreRoot = join('vendor', pkgName);
+
+    const [vendor, name] = themeData.themeID.split('/');
+
     return {
-        name: themeName,
+        name,
         vendor,
-        themeID: normalizeComposerThemeName(vendor, themeName),
-        area: area as Theme['area'],
-        parentID: await getThemeParentName(join(root, pathFromStoreRoot)),
-        pathFromStoreRoot: pathFromStoreRoot,
+        themeID: themeData.themeID,
+        area: themeData.area,
+        parentID: await getThemeParentName(pkgRoot),
+        pathFromStoreRoot: pkgRoot,
     };
 }
 
-function normalizeComposerThemeName(vendor: string, name: string) {
-    // I have no clue if this is the logic used in Magento core,
-    // but it's certainly a half-decent guess, yeah?
-    const normalizedVendor = vendor
-        .split('-')
-        .map(v => `${v[0].toUpperCase()}${v.slice(1)}`)
-        .join('');
-    return `${normalizedVendor}/${name}`;
+type ComposerJSON = {
+    autoload?: {
+        files?: string[];
+    };
+};
+
+/**
+ * @summary Attempts to find and read a theme's `registration.php`
+ *          by inspecting autoload files in `composer.json`
+ */
+async function getRegistrationPHPForComposerPkg(pkgRoot: string) {
+    const composerJSON = JSON.parse(
+        await readFile(join(pkgRoot, 'composer.json'), 'utf8'),
+    ) as ComposerJSON;
+
+    const autoload =
+        (composerJSON.autoload && composerJSON.autoload.files) || [];
+    const possibleRegistrationFiles = autoload.filter(
+        file => parse(file).base === 'registration.php',
+    );
+
+    if (possibleRegistrationFiles.length > 1) {
+        throw new Error(
+            'Unable to determine path to "registration.php" for ' +
+                `the theme at "${pkgRoot}", because results were ambiguous`,
+        );
+    }
+
+    if (!possibleRegistrationFiles.length) {
+        throw new Error(
+            'Unable to find "registration.php" for the theme at ' +
+                `"${pkgRoot}". Make sure the theme's registration is in ` +
+                'the autoload section of the package\'s "composer.json" ',
+        );
+    }
+
+    const registrationPHPPath = join(pkgRoot, possibleRegistrationFiles[0]);
+    const rawRegistration = await readFile(registrationPHPPath, 'utf8');
+
+    return { rawRegistration, registrationPHPPath };
 }
 
 async function getThemeParentName(themePath: string) {
@@ -379,7 +434,7 @@ async function getThemeParentName(themePath: string) {
         );
     }
 
-    const parsedThemeConfig = parse(source, {
+    const parsedThemeConfig = parseXML(source, {
         ignoreAttributes: false,
         attributeNamePrefix: '',
         ignoreNameSpace: true,
