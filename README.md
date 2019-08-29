@@ -35,6 +35,7 @@ As this project is still under heavy development, releases are not being publish
 3. Run `npm test` to verify all unit tests pass, which will help confirm a proper local setup
 4. Run `npm run build` to run the TypeScript compiler and generate a usable copy of `baler`
 5. Run `npm link` in the root of the repository. This will instruct `npm` to create a symlink that makes the `baler` binary available in your `$PATH`
+6. Verify you either have `php` available in your `$PATH`, or set the `$BALER_PHP_PATH` environment variable to point to the binary
 
 ### Usage
 

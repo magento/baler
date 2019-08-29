@@ -4,7 +4,7 @@ export type Theme = {
     themeID: string;
     area: 'frontend' | 'adminhtml';
     parentID?: string;
-    pathFromStoreRoot: string;
+    path: string;
 };
 
 export type ParserResult = {
@@ -29,7 +29,7 @@ export type Components = {
 
 export type Module = {
     moduleID: string;
-    pathFromStoreRoot: string;
+    path: string;
 };
 
 export type StoreData = {
@@ -52,3 +52,8 @@ export type TraceResult = {
 };
 
 export type Shim = Omit<RequireShim, 'init'>;
+
+export type ComponentPaths = {
+    themes: Record<string, string>;
+    modules: Record<string, string>;
+};
