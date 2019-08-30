@@ -9,6 +9,15 @@ const rawConfig = readFileSync(
     require.resolve('./__fixtures__/luma-requirejs-config'),
 );
 
+test('evaluate does not throw on simple window property access', () => {
+    const config = `
+        (function(require) {
+            var foo = window.foo;
+        })(require);
+    `;
+    expect(() => evaluate(config)).not.toThrow();
+});
+
 test('evaluate captures all "deps" values', () => {
     const config = evaluate(rawConfig);
     expect(config.deps).toEqual([

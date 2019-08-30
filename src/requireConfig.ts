@@ -20,15 +20,21 @@ const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 export function evaluate(rawConfig: string) {
     try {
         return evaluateRawConfig(rawConfig);
-    } catch {
-        throw new Error('Failed evaluating "requirejs-config.js"');
+    } catch (err) {
+        throw new Error(
+            'Failed evaluating "requirejs-config.js"\n' +
+                `RequireJS Config Error: ${err.message}`,
+        );
     }
 }
 
 function evaluateRawConfig(rawConfig: string) {
     log.debug('Evaluating raw "requirejs-config.js"');
 
-    const sandbox: { require: Require } = Object.create(null);
+    const sandbox: { require: Require; window: Object } = Object.create(null);
+    // Support property access on window.
+    // https://github.com/DrewML/baler/issues/9
+    sandbox.window = {};
     vm.createContext(sandbox);
 
     // Set up RequireJS in the VM
