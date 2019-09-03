@@ -2,11 +2,15 @@ import { optimizeThemes } from './optimizeThemes';
 import { collectStoreData } from './collectStoreData';
 import { findMagentoRoot } from './magentoFS';
 import { StoreData } from './types';
+import { debugEvent } from './debug';
+import { initLogListener } from './cliLogListener';
 
 /**
  * @summary Execute the CLI
  */
 export async function run(cwd: string) {
+    initLogListener();
+
     const magentoRoot = await findMagentoRoot(cwd);
     if (!magentoRoot) {
         throw new Error(`Could not find a Magento 2 installation from ${cwd}`);
@@ -15,7 +19,9 @@ export async function run(cwd: string) {
     const store = await collectStoreData(magentoRoot);
     const themesToOptimize = getSupportedAndDeployedThemeIDs(store);
 
-    if (!themesToOptimize.length) {
+    if (themesToOptimize.length) {
+        debugEvent({ type: 'eligibleThemes', payload: themesToOptimize });
+    } else {
         throw new Error(
             'No eligible themes were found to be optimized. For a theme ' +
                 'to be optimized, it must:\n\n' +
@@ -26,7 +32,7 @@ export async function run(cwd: string) {
     }
 
     const results = await optimizeThemes(magentoRoot, store, themesToOptimize);
-    console.log(JSON.stringify(results, null, 2));
+    // TODO: Log some summary
 }
 
 function getSupportedAndDeployedThemeIDs(store: StoreData): string[] {

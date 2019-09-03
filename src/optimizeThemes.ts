@@ -11,6 +11,7 @@ import { computeDepsForBundle } from './computeDepsForBundle';
 import { createBundleFromDeps } from './createBundleFromDeps';
 import { writeFile, mkdir } from './fsPromises';
 import { flatten } from './flatten';
+import { debugEvent, debugTimer } from './debug';
 
 const BALER_META_DIR = 'balerbundles';
 
@@ -98,12 +99,29 @@ async function createCoreBundle(
         firstLocaleRoot,
     );
     const coreBundleDeps = computeDepsForBundle(graph, resolvedEntryIDs);
+
+    const createBundleTimer = debugTimer();
+    debugEvent({
+        type: 'createBundle:start',
+        themeID: theme.themeID,
+        bundleName: 'core-bundle',
+        deps: coreBundleDeps,
+    });
     const { bundle, bundleFilename, map } = await createBundleFromDeps(
         'core-bundle',
         coreBundleDeps,
         firstLocaleRoot,
         requireConfig,
+        theme.themeID,
     );
+    debugEvent({
+        type: 'createBundle:end',
+        themeID: theme.themeID,
+        bundleName: 'core-bundle',
+        bundleSize: Buffer.from(bundle).byteLength,
+        timing: createBundleTimer(),
+    });
+
     const newRequireConfig = generateBundleRequireConfig(
         rawRequireConfig,
         'core-bundle',
