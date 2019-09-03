@@ -38,16 +38,11 @@ export function initLogListener() {
             }
             case 'invalidShims': {
                 const { themeID, deps } = event;
-                const shimLines = deps.map(d => `   - ${d}\n`);
+                const shimLines = deps.map(d => `   - ${d}`).join('\n');
                 console.log(
-                    [
-                        'One or more invalid shim configurations were found ',
-                        `while bundling ${themeID}. RequireJS does not support `,
-                        'shim configuration for modules that already call "define". ',
-                        'You may have unexpected results when running the bundle in ',
-                        `your store\n  Invalid shims for:\n`,
-                        ...shimLines,
-                    ].join(''),
+                    'One or more invalid shim configurations were found ' +
+                        `while bundling ${themeID}. See https://github.com/DrewML/baler/blob/master/docs/INVALID_SHIM.md\n` +
+                        shimLines,
                 );
                 break;
             }
@@ -61,6 +56,13 @@ export function initLogListener() {
                         `for ${themeID} in ${prettyMS(total)}`,
                 );
                 break;
+            }
+            case 'minifyGeneratedFiles:start': {
+                const { themeID, files } = event;
+                const filesLines = files.map(f => `  - ${f}`).join('\n');
+                console.log(
+                    `Starting to minify ${files.length} files for ${themeID} in parallel.\n${filesLines}`,
+                );
             }
         }
     });

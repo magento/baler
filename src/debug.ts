@@ -27,6 +27,17 @@ type BalerDebugEvent =
           bundleName: string;
           bundleSize: number;
           timing: EventTiming;
+      }
+    | {
+          type: 'minifyGeneratedFiles:start';
+          themeID: string;
+          files: string[];
+      }
+    | {
+          type: 'minifyGeneratedFiles:end';
+          themeID: string;
+          files: string[];
+          timing: EventTiming;
       };
 
 type DebugEventHandler = (event: BalerDebugEvent) => void;

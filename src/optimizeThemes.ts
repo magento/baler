@@ -127,6 +127,13 @@ async function createCoreBundle(
         'core-bundle',
         coreBundleDeps,
     );
+
+    debugEvent({
+        type: 'minifyGeneratedFiles:start',
+        themeID: theme.themeID,
+        files: [bundleFilename, 'requirejs-bundle-config.js'],
+    });
+    const createMinifyTimer = debugTimer();
     const [minifiedCoreBundle, minifiedRequireConfig] = await Promise.all([
         minifier.minifyFromString(bundle, bundleFilename, map),
         minifier.minifyFromString(
@@ -134,6 +141,12 @@ async function createCoreBundle(
             'requirejs-bundle-config.js',
         ),
     ]);
+    debugEvent({
+        type: 'minifyGeneratedFiles:end',
+        themeID: theme.themeID,
+        files: [bundleFilename, 'requirejs-bundle-config.js'],
+        timing: createMinifyTimer(),
+    });
 
     const files = [
         {
