@@ -48,6 +48,7 @@
   "dependencies": {
     "acorn": "^6.2.1",
     "acorn-loose": "^6.1.0",
+    "chalk": "^2.4.2",
     "console-log-level": "^1.4.1",
     "esquery": "^1.0.1",
     "execa": "^2.0.4",
@@ -58,6 +59,7 @@
     "jest-worker": "^24.9.0",
     "jsesc": "^2.5.2",
     "magic-string": "^0.25.3",
+    "ora": "^3.4.0",
     "pretty-bytes": "^5.3.0",
     "pretty-ms": "^5.0.0",
     "requirejs": "^2.3.6",

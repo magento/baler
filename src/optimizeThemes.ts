@@ -11,7 +11,7 @@ import { computeDepsForBundle } from './computeDepsForBundle';
 import { createBundleFromDeps } from './createBundleFromDeps';
 import { writeFile, mkdir } from './fsPromises';
 import { flatten } from './flatten';
-import { debugEvent, debugTimer } from './debug';
+import { cliTask } from './cliTask';
 
 const BALER_META_DIR = 'balerbundles';
 
@@ -100,13 +100,7 @@ async function createCoreBundle(
     );
     const coreBundleDeps = computeDepsForBundle(graph, resolvedEntryIDs);
 
-    const createBundleTimer = debugTimer();
-    debugEvent({
-        type: 'createBundle:start',
-        themeID: theme.themeID,
-        bundleName: 'core-bundle',
-        deps: coreBundleDeps,
-    });
+    const endBundleTask = cliTask(`Create core bundle file`, theme.themeID);
     const { bundle, bundleFilename, map } = await createBundleFromDeps(
         'core-bundle',
         coreBundleDeps,
@@ -114,13 +108,7 @@ async function createCoreBundle(
         requireConfig,
         theme.themeID,
     );
-    debugEvent({
-        type: 'createBundle:end',
-        themeID: theme.themeID,
-        bundleName: 'core-bundle',
-        bundleSize: Buffer.from(bundle).byteLength,
-        timing: createBundleTimer(),
-    });
+    endBundleTask(`Created core bundle file`);
 
     const newRequireConfig = generateBundleRequireConfig(
         rawRequireConfig,
@@ -128,12 +116,10 @@ async function createCoreBundle(
         coreBundleDeps,
     );
 
-    debugEvent({
-        type: 'minifyGeneratedFiles:start',
-        themeID: theme.themeID,
-        files: [bundleFilename, 'requirejs-bundle-config.js'],
-    });
-    const createMinifyTimer = debugTimer();
+    const endMinifyTask = cliTask(
+        `Minify core bundle and RequireJS config`,
+        theme.themeID,
+    );
     const [minifiedCoreBundle, minifiedRequireConfig] = await Promise.all([
         minifier.minifyFromString(bundle, bundleFilename, map),
         minifier.minifyFromString(
@@ -141,12 +127,15 @@ async function createCoreBundle(
             'requirejs-bundle-config.js',
         ),
     ]);
-    debugEvent({
-        type: 'minifyGeneratedFiles:end',
-        themeID: theme.themeID,
-        files: [bundleFilename, 'requirejs-bundle-config.js'],
-        timing: createMinifyTimer(),
-    });
+    const coreBundleSizes = {
+        beforeMin: Buffer.from(bundle).byteLength,
+        afterMin: Buffer.from(minifiedCoreBundle.code).byteLength,
+    };
+    const requireConfigSizes = {
+        beforeMin: Buffer.from(rawRequireConfig).byteLength,
+        afterMin: Buffer.from(minifiedRequireConfig.code).byteLength,
+    };
+    endMinifyTask(`Minified core bundle and RequireJS`);
 
     const files = [
         {
@@ -173,14 +162,8 @@ async function createCoreBundle(
         baseLocale: firstLocale,
         entryPoints: resolvedEntryIDs,
         graph,
-        coreBundleSizes: {
-            beforeMin: Buffer.from(bundle).byteLength,
-            afterMin: Buffer.from(minifiedCoreBundle.code).byteLength,
-        },
-        requireConfigSizes: {
-            beforeMin: Buffer.from(rawRequireConfig).byteLength,
-            afterMin: Buffer.from(minifiedRequireConfig.code).byteLength,
-        },
+        coreBundleSizes,
+        requireConfigSizes,
     };
 }
 

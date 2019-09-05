@@ -27,6 +27,7 @@ if (major < 10 || (major === 10 && minor < 12)) {
 require('source-map-support/register');
 
 process.env.BALER_LOG_LEVEL = process.env.BALER_LOG_LEVEL || 'info';
+process.env.BALER_CLI_MODE = true;
 
 require('../dist/cli')
     .run(process.cwd())

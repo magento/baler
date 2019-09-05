@@ -4,7 +4,7 @@ import {
     getDeployedThemes,
 } from './magentoFS';
 import { StoreData } from './types';
-import { debugEvent, debugTimer } from './debug';
+import { cliTask } from './cliTask';
 
 /**
  * @summary Collect (in parallel) all the data needed up-front for
@@ -13,8 +13,7 @@ import { debugEvent, debugTimer } from './debug';
 export async function collectStoreData(
     magentoRoot: string,
 ): Promise<StoreData> {
-    const eventTime = debugTimer();
-    debugEvent({ type: 'collectStoreData:start' });
+    const endTask = cliTask('Collect theme/module data');
 
     const [enabledModules, components, deployedThemes] = await Promise.all([
         getEnabledModules(magentoRoot),
@@ -28,11 +27,7 @@ export async function collectStoreData(
         deployedThemes,
     };
 
-    debugEvent({
-        type: 'collectStoreData:end',
-        storeData,
-        timing: eventTime(),
-    });
+    endTask('Collected theme/module data');
 
     return storeData;
 }
