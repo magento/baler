@@ -19,7 +19,19 @@
 
 ## Getting Started (Early Alpha)
 
-As this project is still under heavy development, releases are not being published to `npm` yet. You must follow the `Development Setup` steps outlined in this document
+As this project is still under heavy development, releases are not being published to `npm` yet. You must follow the [`Development Setup`](#Development-Setup) steps outlined in this document
+
+## Usage
+
+**Note**: You must already have `baler` installed. See [`Development Setup`](#Development-Setup)
+
+| Command                                                    | Result                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| `baler`                                                    | Optimize all deployed themes                                        |
+| `baler build`                                              | Optimize all deployed themes                                        |
+| `baler build --theme Magento/luma`                         | Optimize a single deployed theme                                    |
+| `baler build --theme Magento/luma --theme MyVendor/custom` | Optimize multiple deployed themes                                   |
+| `baler graph Magento/luma`                                 | Generate a dotviz graph of all AMD dependencies in a deployed theme |
 
 ## Development Setup
 
@@ -36,10 +48,6 @@ As this project is still under heavy development, releases are not being publish
 4. Run `npm run build` to run the TypeScript compiler and generate a usable copy of `baler`
 5. Run `npm link` in the root of the repository. This will instruct `npm` to create a symlink that makes the `baler` binary available in your `$PATH`
 6. Verify you either have `php` available in your `$PATH`, or set the `$BALER_PHP_PATH` environment variable to point to the binary
-
-### Usage
-
-1. In a terminal, in either the root or a subdirectory of a Magento 2 installation, run `baler`. No configuration is needed
 
 ### Debugging
 
