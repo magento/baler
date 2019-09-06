@@ -4,22 +4,15 @@
 
 `baler` is an [AMD module](https://requirejs.org/) bundler and preloader for [Magento 2](https://u.magento.com/magento-2) stores.
 
-## Goals
+## Getting Started (Early Alpha)
 
--   Improve client-side performance of all Magento 2 stores
--   Require little to no configuration for a typical Magento 2 store
--   Work against as many _frontend_ themes are possible
--   Be (and stay) fast
+If you're willing to test alpha software, [please proceed](docs/ALPHA.md)
 
 ## Docs
 
 -   [How Does it Work?](docs/HOW_IT_WORKS.md)
 -   [Why a Custom Bundler?](docs/WHY_CUSTOM.md)
 -   [State of the Project](docs/STATE_OF_PROJECT.md)
-
-## Getting Started (Early Alpha)
-
-As this project is still under heavy development, releases are not being published to `npm` yet. You must follow the [`Development Setup`](#Development-Setup) steps outlined in this document
 
 ## Usage
 
@@ -33,23 +26,7 @@ As this project is still under heavy development, releases are not being publish
 | `baler build --theme Magento/luma --theme MyVendor/custom` | Optimize multiple deployed themes                                   |
 | `baler graph Magento/luma`                                 | Generate a dotviz graph of all AMD dependencies in a deployed theme |
 
-## Development Setup
-
-### Requirements
-
--   `node.js` version >= `10.12.0`
--   `npm` version >= `6.4.1`
-
-### First-Time Setup
-
-1. Clone the repository
-2. Run `npm install` in the root of the repository to install necessary dependencies
-3. Run `npm test` to verify all unit tests pass, which will help confirm a proper local setup
-4. Run `npm run build` to run the TypeScript compiler and generate a usable copy of `baler`
-5. Run `npm link` in the root of the repository. This will instruct `npm` to create a symlink that makes the `baler` binary available in your `$PATH`
-6. Verify you either have `php` available in your `$PATH`, or set the `$BALER_PHP_PATH` environment variable to point to the binary
-
-### Debugging
+## Debugging
 
 #### node.js debugger
 
