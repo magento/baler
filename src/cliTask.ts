@@ -12,7 +12,7 @@ const noop = () => {};
  *          completed or in-progress
  */
 export function cliTask(startMessage: string, themeID?: string) {
-    if (!process.env.BALER_CLI_MODE) {
+    if (!(global as any).BALER_CLI_MODE) {
         // If someone is using baler programatically,
         // they won't want our CLI noise
         return noop;

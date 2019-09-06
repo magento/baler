@@ -13,6 +13,9 @@ var parts = version.split('.').map(Number);
 var major = parts[0];
 var minor = parts[1];
 
+// Note: This 10.12 version number should be kept in sync with
+// the "engines" key in package.json. Not reading that value
+// here to avoid the extra disk hit during startup
 if (major < 10 || (major === 10 && minor < 12)) {
     console.error(
         'baler requires a version of node.js ' +
@@ -26,13 +29,6 @@ if (major < 10 || (major === 10 && minor < 12)) {
 // reference the TypeScript src, not compiled JS
 require('source-map-support/register');
 
-process.env.BALER_LOG_LEVEL = process.env.BALER_LOG_LEVEL || 'info';
-process.env.BALER_CLI_MODE = true;
+global.BALER_CLI_MODE = true;
 
-require('../dist/cli')
-    .run(process.cwd())
-    .then(console.log)
-    .catch(function(error) {
-        console.error(error.stack);
-        process.exit(1);
-    });
+require('../dist/cli').run(process.cwd());

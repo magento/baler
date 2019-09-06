@@ -1,5 +1,6 @@
 import execa from 'execa';
 import { ComponentPaths } from './types';
+import { BalerError } from './BalerError';
 
 // Note: Loading the very minimal amount of code on the PHP side
 // so that we don't hit the performance bottleneck of bootstrapping
@@ -27,7 +28,7 @@ export async function getModulesAndThemesFromMagento(
         });
         return JSON.parse(stdout) as ComponentPaths;
     } catch (err) {
-        throw new Error(
+        throw new BalerError(
             'Unable to extract list of modules/theme from Magento.\n\n' +
                 'Common causes:\n' +
                 '  - "php" binary not available on $PATH. The path to the PHP binary can ' +

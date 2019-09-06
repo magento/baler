@@ -49,6 +49,6 @@ As this project is still under heavy development, releases are not being publish
 2. In Chrome, visit `chrome://inspect`
 3. Click `Inspect` on the pending connection
 
-#### Verbose Logging
+#### Tracing
 
-1. Run `baler` with `BALER_LOG_LEVEL=debug`
+Run the CLI with the `--trace` flag. An event log will be written to `baler-trace-{timestamp}.json`

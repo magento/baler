@@ -1,4 +1,5 @@
 import { Theme } from './types';
+import { BalerError } from './BalerError';
 
 /**
  * @summary Recursively resolve the inheritance hierarchy for a given theme.
@@ -16,7 +17,7 @@ export function getThemeHierarchy(
         t => t.themeID === theme.parentID,
     );
     if (!parent) {
-        throw new Error(
+        throw new BalerError(
             `Theme "${theme.themeID}" specified a parent (in theme.xml) of ` +
                 `"${theme.parentID}", but that theme could not be found.`,
         );

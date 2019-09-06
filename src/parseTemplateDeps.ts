@@ -3,6 +3,7 @@ import { ObjectExpression } from 'estree';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';
 import { parseObjectExpression } from './jsParser';
 import { ParserResult } from './types';
+import { BalerError } from './BalerError';
 
 /**
  * @summary Given contents from a .phtml or .html file from Magento,
@@ -118,7 +119,7 @@ function extractMageInitDepsFromDataBind(attrValue: string): string[] {
     );
 
     if (!mageInitProp) {
-        throw new Error('Could not locate "mageInit" property');
+        throw new BalerError('Could not locate "mageInit" property');
     }
 
     const propValue = mageInitProp.value as ObjectExpression;

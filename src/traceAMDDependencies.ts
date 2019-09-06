@@ -1,4 +1,4 @@
-import { log } from './log';
+import { trace } from './trace';
 import { extname, join } from 'path';
 import { readFile } from './fsPromises';
 import { wrapP } from './wrapP';
@@ -86,7 +86,7 @@ export async function traceAMDDependencies(
     while (toVisit.size) {
         const [moduleID] = toVisit;
         toVisit.delete(moduleID);
-        log.debug(`Preparing to read + parse "${moduleID}"`);
+        trace(`Preparing to read + parse "${moduleID}"`);
 
         const { read, path, issuer } = moduleCache.get(moduleID) as CacheEntry;
         const [err, source] = await wrapP(read);
@@ -94,13 +94,13 @@ export async function traceAMDDependencies(
             // Missing files are treated as warnings, rather than hard errors, because
             // a storefront is still usable (will just take a perf hit)
             warnings.push(unreadableDependencyWarning(moduleID, path, issuer));
-            log.debug(`Warning for missing dependency "${moduleID}"`);
+            trace(`Warning for missing dependency "${moduleID}"`);
             continue;
         }
 
         const { deps } = parseJavaScriptDeps(source as string);
         if (deps.length) {
-            log.debug(`Found dependency request for: ${deps.join(', ')}`);
+            trace(`Found dependency request for: ${deps.join(', ')}`);
         }
 
         const mixins = getMixinsForModule(moduleID, requireConfig).map(

@@ -1,6 +1,7 @@
 import jsesc from 'jsesc';
 import MagicString from 'magic-string';
 import { Shim } from './types';
+import { BalerError } from './BalerError';
 
 // Tip: Can verify source-mappings are working correctly
 // using http://evanw.github.io/source-map-visualization/
@@ -70,7 +71,7 @@ export function renameModule(id: string, source: string) {
     const str = new MagicString(source);
     const { 0: match, index } = source.match(RE_DEFINE) || [];
     if (typeof index !== 'number') {
-        throw new Error(
+        throw new BalerError(
             'Failed RE_DEFINE RegExp. Should have used a real parser',
         );
     }

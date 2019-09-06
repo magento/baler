@@ -7,6 +7,7 @@ import fromEntries from 'fromentries';
 import { parse as parseXML } from 'fast-xml-parser';
 import { findUp } from './findUp';
 import { getModulesAndThemesFromMagento } from './magentoInterop';
+import { BalerError } from './BalerError';
 
 /**
  * @summary Hacky but functional validation that a directory is the
@@ -31,7 +32,7 @@ export async function getEnabledModules(magentoRoot: string) {
     const configPath = join(magentoRoot, 'app/etc/config.php');
     const rawConfig = await readFile(configPath, 'utf8').catch(() => '');
     if (!rawConfig) {
-        throw new Error(
+        throw new BalerError(
             `Failed to read list of enabled modules from ${configPath}`,
         );
     }
@@ -186,7 +187,7 @@ async function getThemeParentName(themePath: string) {
     const themeXMLPath = join(themePath, 'theme.xml');
     const source = await readFile(themeXMLPath, 'utf8').catch(() => '');
     if (!source) {
-        throw new Error(
+        throw new BalerError(
             `Could not find theme configuration (theme.xml) for theme at "${themeXMLPath}"`,
         );
     }

@@ -1,5 +1,4 @@
-import { log } from './log';
-
+import { trace } from './trace';
 /**
  * @summary Separate a RequireJS module ID from associated plugin
  */
@@ -13,7 +12,7 @@ export function parseModuleID(request: string) {
 
     if (plugin === 'text') {
         if (others.length) {
-            log.warn(
+            trace(
                 `Too many values passed to "text" plugin for request "${request}"`,
             );
         }
@@ -22,14 +21,14 @@ export function parseModuleID(request: string) {
 
     if (plugin === 'domReady') {
         if (others.length) {
-            log.warn(
+            trace(
                 `Too many values passed to "domReady" plugin for request "${request}"`,
             );
         }
         return { id, plugin: 'domReady' };
     }
 
-    log.warn(
+    trace(
         `Unrecognized plugin "${plugin}" for request "${request}". This file will be skipped`,
     );
 

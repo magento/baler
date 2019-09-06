@@ -1,9 +1,10 @@
 import vm from 'vm';
 import { join } from 'path';
-import { log } from './log';
+import { trace } from './trace';
 import { readFileSync } from 'fs';
 import { readFile } from './fsPromises';
 import { MagentoRequireConfig, Shim } from './types';
+import { BalerError } from './BalerError';
 
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 
@@ -21,7 +22,7 @@ export function evaluate(rawConfig: string) {
     try {
         return evaluateRawConfig(rawConfig);
     } catch (err) {
-        throw new Error(
+        throw new BalerError(
             'Failed evaluating "requirejs-config.js"\n' +
                 `RequireJS Config Error: ${err.message}`,
         );
@@ -29,7 +30,7 @@ export function evaluate(rawConfig: string) {
 }
 
 function evaluateRawConfig(rawConfig: string) {
-    log.debug('Evaluating raw "requirejs-config.js"');
+    trace('Evaluating raw "requirejs-config.js"');
 
     const sandbox: { require: Require; window: Object } = Object.create(null);
     // Support property access on window.
@@ -125,7 +126,7 @@ export async function getRequireConfigFromDir(path: string) {
         const requireConfig = evaluateRawConfig(rawRequireConfig);
         return { rawRequireConfig, requireConfig };
     } catch {
-        throw new Error(
+        throw new BalerError(
             `Failed reading or evaluating RequireJS config at path "${path}"`,
         );
     }

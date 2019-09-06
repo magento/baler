@@ -1,6 +1,7 @@
 import * as acorn from 'acorn';
 import * as acornLoose from 'acorn-loose';
 import { Program, ObjectExpression } from 'estree';
+import { BalerError } from './BalerError';
 
 /**
  * @summary Parse JavaScript into an ESTree AST. Can optionally
@@ -38,7 +39,7 @@ export function parseObjectExpression(
         ) {
             return firstStmt.expression as ObjectExpression;
         } else {
-            throw new Error('Unable to parse object expression');
+            throw new BalerError('Unable to parse object expression');
         }
     } catch (err) {
         if (!loose) {

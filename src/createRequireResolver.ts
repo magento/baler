@@ -1,5 +1,5 @@
 import vm from 'vm';
-import { log } from './log';
+import { trace } from './trace';
 import { MagentoRequireConfig } from './types';
 import { readFileSync } from 'fs';
 import { parseModuleID } from './parseModuleID';
@@ -26,9 +26,7 @@ export function createRequireResolver(requireConfig: MagentoRequireConfig) {
     const makeModuleMap: any = sandbox.require.s.contexts._.makeModuleMap;
     const toUrl: Require['toUrl'] = sandbox.require.s.contexts._.require.toUrl;
     const resolver = (requestID: string, issuingModule: string = '') => {
-        log.debug(
-            `Resolving dependency "${requestID}" from "${issuingModule}"`,
-        );
+        trace(`Resolving dependency "${requestID}" from "${issuingModule}"`);
         const { id, plugin } = parseModuleID(requestID);
         const map = {
             moduleID: '',

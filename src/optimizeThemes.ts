@@ -12,6 +12,7 @@ import { createBundleFromDeps } from './createBundleFromDeps';
 import { writeFile, mkdir } from './fsPromises';
 import { flatten } from './flatten';
 import { cliTask } from './cliTask';
+import { BalerError } from './BalerError';
 
 const BALER_META_DIR = 'balerbundles';
 
@@ -201,7 +202,7 @@ async function writeFileWithMkDir(path: string, source: string) {
 function getThemeByID(themeID: string, themes: Record<string, Theme>) {
     const theme = themes[themeID];
     if (!theme) {
-        throw new Error(
+        throw new BalerError(
             `Attempted to optimize "${themeID}", but it was ` +
                 'not found in the store.',
         );
@@ -212,7 +213,7 @@ function getThemeByID(themeID: string, themes: Record<string, Theme>) {
 
 function throwOnDisallowedTheme(theme: Theme) {
     if (theme.area !== 'frontend') {
-        throw new Error(
+        throw new BalerError(
             `Cannot optimize theme "${theme.themeID}" ` +
                 'because only "frontend" themes are supported by baler',
         );
@@ -220,7 +221,9 @@ function throwOnDisallowedTheme(theme: Theme) {
     if (theme.themeID === 'Magento/blank') {
         // Only reason we're doing this check is because it's likely
         // a mistake 99.9% of the time if you try to bundle blank
-        throw new Error(`Optimization of "Magento/blank" is not supported`);
+        throw new BalerError(
+            `Optimization of "Magento/blank" is not supported`,
+        );
     }
 }
 
@@ -233,7 +236,7 @@ function getEntryPointsFromConfig(
         return entries;
     }
 
-    throw new Error(
+    throw new BalerError(
         `Could not find any entry points ("deps") config in ` +
             `"requirejs-config.js" for theme "${themeID}"`,
     );
