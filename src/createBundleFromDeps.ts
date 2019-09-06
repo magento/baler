@@ -12,7 +12,6 @@ import { readFile } from './fsPromises';
 import { MagentoRequireConfig } from './types';
 import MagicString, { Bundle } from 'magic-string';
 import { createRequireResolver } from './createRequireResolver';
-import { debugEvent } from './debug';
 
 /**
  * @summary Create a bundle file (compatible with the RequireJS runtime)
@@ -33,11 +32,7 @@ export async function createBundleFromDeps(
     );
     const { bundle, depsWithInvalidShims } = createBundle(transformedModules);
     if (depsWithInvalidShims) {
-        debugEvent({
-            type: 'invalidShims',
-            themeID,
-            deps: depsWithInvalidShims,
-        });
+        // TODO: surface in CLI at end of run
     }
 
     const bundleFilename = `${parse(bundleName).name}.js`;
