@@ -1,5 +1,10 @@
 const { join, relative } = require('path');
-const { findMagentoRoot, getEnabledModules } = require('../magentoFS');
+const {
+    findMagentoRoot,
+    getEnabledModules,
+    getStaticDirForTheme,
+    getDeployedThemes,
+} = require('../magentoFS');
 
 const getFixturePath = fixtureName =>
     join(__dirname, '__fixtures__', fixtureName);
@@ -23,6 +28,25 @@ test('findMagentoRoot finds root in parent dir', async () => {
 test('findMagentoRoot returns undefined for invalid dir path', async () => {
     const result = await findMagentoRoot('/not/a/real/path');
     expect(result).toEqual(undefined);
+});
+
+test('getStaticDirForTheme', () => {
+    const theme = {
+        vendor: 'Magento',
+        name: 'luma',
+        themeID: 'Magento/luma',
+        area: 'frontend',
+        path: '/some/file/path',
+    };
+    expect(getStaticDirForTheme(theme)).toBe(
+        'pub/static/frontend/Magento/luma',
+    );
+});
+
+test('getDeployedThemese', async () => {
+    const magentoRoot = getFixturePath('get-deployed-themes');
+    const deployedThemes = await getDeployedThemes(magentoRoot);
+    expect(deployedThemes).toEqual(['Magento/luma', 'Magento/backend']);
 });
 
 test('Can parse config dumped with app:config:dump', async () => {
