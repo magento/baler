@@ -26,7 +26,10 @@ export function createRequireResolver(requireConfig: MagentoRequireConfig) {
     const makeModuleMap: any = sandbox.require.s.contexts._.makeModuleMap;
     const toUrl: Require['toUrl'] = sandbox.require.s.contexts._.require.toUrl;
     const resolver = (requestID: string, issuingModule: string = '') => {
-        trace(`Resolving dependency "${requestID}" from "${issuingModule}"`);
+        trace(
+            `Resolving dependency "${requestID}" from "${issuingModule ||
+                'unknown source'}"`,
+        );
         const { id, plugin } = parseModuleID(requestID);
         const map = {
             moduleID: '',

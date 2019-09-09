@@ -55,6 +55,8 @@ function evaluateRawConfig(rawConfig: string) {
     const config = sandbox.require.s.contexts._.config as MagentoRequireConfig;
     config.deps = entryDeps;
 
+    trace(`Evaluated requirejs-config.js. Results: ${JSON.stringify(config)}`);
+
     return config;
 }
 
