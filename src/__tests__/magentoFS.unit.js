@@ -1,5 +1,29 @@
-const { join } = require('path');
-const { getEnabledModules } = require('../magentoFS');
+const { join, relative } = require('path');
+const { findMagentoRoot, getEnabledModules } = require('../magentoFS');
+
+const getFixturePath = fixtureName =>
+    join(__dirname, '__fixtures__', fixtureName);
+
+test('findMagentoRoot finds root at some level', async () => {
+    const dir = getFixturePath('find-magento-root-same-level');
+    const result = await findMagentoRoot(dir);
+
+    const relResult = relative(__dirname, result);
+    expect(relResult).toBe('__fixtures__/find-magento-root-same-level');
+});
+
+test('findMagentoRoot finds root in parent dir', async () => {
+    const dir = join(getFixturePath('find-magento-root-one-up'), 'app');
+    const result = await findMagentoRoot(dir);
+
+    const relResult = relative(__dirname, result);
+    expect(relResult).toBe('__fixtures__/find-magento-root-one-up');
+});
+
+test('findMagentoRoot returns undefined for invalid dir path', async () => {
+    const result = await findMagentoRoot('/not/a/real/path');
+    expect(result).toEqual(undefined);
+});
 
 test('Can parse config dumped with app:config:dump', async () => {
     const magentoRoot = join(
