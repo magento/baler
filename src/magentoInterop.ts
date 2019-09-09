@@ -1,6 +1,7 @@
 import execa from 'execa';
 import { ComponentPaths } from './types';
 import { BalerError } from './BalerError';
+import { trace } from './trace';
 
 // Note: Loading the very minimal amount of code on the PHP side
 // so that we don't hit the performance bottleneck of bootstrapping
@@ -22,12 +23,16 @@ const PHP_BIN = process.env.BALER_PHP_PATH || 'php';
 export async function getModulesAndThemesFromMagento(
     magentoRoot: string,
 ): Promise<ComponentPaths> {
+    trace('requesting module/theme payload from magento');
+
     try {
         const { stdout } = await execa(PHP_BIN, [`-r`, phpSource], {
             cwd: magentoRoot,
         });
+        trace(`received modules/themes payload from magento: ${stdout}`);
         return JSON.parse(stdout) as ComponentPaths;
     } catch (err) {
+        trace(`failed extracting data from magento: ${err.stack}`);
         throw new BalerError(
             'Unable to extract list of modules/theme from Magento.\n\n' +
                 'Common causes:\n' +

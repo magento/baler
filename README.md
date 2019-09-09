@@ -36,4 +36,4 @@ If you're willing to test alpha software, [please proceed](docs/ALPHA.md)
 
 #### Tracing
 
-Run the CLI with the `--trace` flag. An event log will be written to `baler-trace-{timestamp}.json`
+Run the CLI with the `--trace` flag. An event log will be written to `baler-trace-{timestamp}.txt`

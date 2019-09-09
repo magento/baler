@@ -6,7 +6,7 @@ import { createWriteStream, WriteStream } from 'fs';
  * @summary Lazily initialize a write stream for a log file
  */
 const getTraceFileStream = (() => {
-    const traceFile = join(process.cwd(), `baler-trace-${Date.now()}.json`);
+    const traceFile = join(process.cwd(), `baler-trace-${Date.now()}.txt`);
     let writeStream: WriteStream;
 
     return () => {

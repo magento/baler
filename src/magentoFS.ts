@@ -8,12 +8,14 @@ import { parse as parseXML } from 'fast-xml-parser';
 import { findUp } from './findUp';
 import { getModulesAndThemesFromMagento } from './magentoInterop';
 import { BalerError } from './BalerError';
+import { trace } from './trace';
 
 /**
  * @summary Hacky but functional validation that a directory is the
  *          root of a Magento 2 installation
  */
 export async function findMagentoRoot(dir: string) {
+    trace(`looking for magento root starting at ${dir}`);
     const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
     const predicate = (dir: string, entries: string[]) => {
         return EXPECTED_ENTRIES.every(e => entries.includes(e));
@@ -29,6 +31,7 @@ export async function findMagentoRoot(dir: string) {
  *          of it not following very specific conventions is small
  */
 export async function getEnabledModules(magentoRoot: string) {
+    trace('reading enabled modules from app/etc/config.php');
     const configPath = join(magentoRoot, 'app/etc/config.php');
     const rawConfig = await readFile(configPath, 'utf8').catch(() => '');
     if (!rawConfig) {
@@ -48,6 +51,7 @@ export async function getEnabledModules(magentoRoot: string) {
         if (name && Number(enabledStr)) enabledModules.push(name);
     }
 
+    trace(`enabled modules: ${JSON.stringify(enabledModules)}`);
     return enabledModules;
 }
 
@@ -101,6 +105,7 @@ function getModulesFromPaths(
 export async function getDeployedThemes(
     magentoRoot: string,
 ): Promise<string[]> {
+    trace('checking pub/static for deployed themes');
     const staticRoot = join(magentoRoot, 'pub', 'static');
 
     const [frontendVendors, adminVendors] = await Promise.all([
@@ -124,7 +129,12 @@ export async function getDeployedThemes(
         pendingAdminThemes,
     ]);
 
-    return [...flatten(frontendThemes), ...flatten(adminThemes)];
+    const deployedThemes = [
+        ...flatten(frontendThemes),
+        ...flatten(adminThemes),
+    ];
+    trace(`found deployed themes: ${deployedThemes}`);
+    return deployedThemes;
 }
 
 /**
@@ -166,12 +176,19 @@ export async function getLocalesForDeployedTheme(
     magentoRoot: string,
     theme: Theme,
 ): Promise<string[]> {
+    trace(`fetching deployed locales for ${theme.themeID}`);
     const themeRoot = join(magentoRoot, getStaticDirForTheme(theme));
     const dirs = await getDirEntriesAtPath(themeRoot);
 
     // filter out any extra files/folders that aren't locales
     const reLang = /^[a-z]{2}(?:_[a-z]{2})?$/i;
-    return dirs.filter(d => reLang.test(d));
+    const locales = dirs.filter(d => reLang.test(d));
+    trace(
+        `found deployed locales for ${theme.themeID}: ${JSON.stringify(
+            locales,
+        )}`,
+    );
+    return locales;
 }
 
 export function getStaticDirForTheme(theme: Theme) {
@@ -184,6 +201,7 @@ export function getStaticDirForTheme(theme: Theme) {
 }
 
 async function getThemeParentName(themePath: string) {
+    trace(`checking for parent of theme at ${themePath}`);
     const themeXMLPath = join(themePath, 'theme.xml');
     const source = await readFile(themeXMLPath, 'utf8').catch(() => '');
     if (!source) {
@@ -198,7 +216,13 @@ async function getThemeParentName(themePath: string) {
         ignoreNameSpace: true,
     });
 
-    return (parsedThemeConfig.theme.parent as string) || '';
+    const parent = (parsedThemeConfig.theme.parent as string) || '';
+    trace(
+        parent
+            ? `found parent of ${parent} for theme at ${themePath}`
+            : `no parent found for theme at path ${themePath}`,
+    );
+    return parent;
 }
 
 async function getDeployedThemesForVendor(
