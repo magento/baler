@@ -18,6 +18,10 @@ An installation of `node.js` includes `npm`, which will be needed for the next s
 
 As a sanity check, run `npm test` to verify that baler's unit tests are passing
 
+## Build from source
+
+Run `npm run build` in the root of the `baler` directory to compile from source
+
 ## Install `baler` globally
 
 Run `npm link` in the `baler` directory, which will add the `baler` binary to your \$PATH
