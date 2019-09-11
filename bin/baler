@@ -31,4 +31,4 @@ require('source-map-support/register');
 
 global.BALER_CLI_MODE = true;
 
-require('../dist/cli/initializeCLI').initializeCLI(process.cwd());
+require('../dist/cli/initializeCLI').initializeCLI(process.argv, process.cwd());

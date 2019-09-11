@@ -11,5 +11,6 @@ module.exports = {
             diagnostics: false,
         },
     },
+    restoreMocks: true,
     testPathIgnorePatterns: ['/node_modules|__fixtures__/'],
 };

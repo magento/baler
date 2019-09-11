@@ -1,56 +1,50 @@
-import yargs from 'yargs';
 import { findMagentoRoot } from '../magentoFS';
 import { trace, enableTracing } from '../trace';
 import { build } from './build';
 import { graph } from './graph';
 import { BalerError } from '../BalerError';
 import chalk from 'chalk';
+import minimist from 'minimist';
 
-export async function initializeCLI(cwd: string) {
-    trace('initializeCLI');
-    const cli = yargs.scriptName('baler').usage('$0 <cmd> [args]');
+export async function initializeCLI(argv: string[], cwd: string) {
+    const args = minimist(argv.slice(2));
+    const [command] = args._;
+
+    if (args.help) {
+        return console.log(helpMsg);
+    }
+
+    if (args.trace) enableTracing();
+    trace('starting CLI');
+
     const magentoRoot = await findMagentoRoot(cwd);
     if (!magentoRoot) {
-        console.error(
-            chalk.red(`Could not find Magento store root from "${cwd}"`),
-        );
-        process.exit(1);
-        // TypeScript doesn't understand that `process.exit` halts execution,
-        // so this throw that is otherwise dead code is here for a compiler hint
-        throw void 0;
+        errMsgAndExit(`Could not find Magento store root from "${cwd}"`);
+        return;
     }
 
-    cli.command(
-        'build [--theme Magento/luma]',
-        'Optimize JavaScript assets for one or more themes',
-        {
-            theme: {
-                requiresArg: true,
-                array: true,
-                type: 'string',
-            },
-        },
-        v => failOnReject(build)(magentoRoot, v.theme),
-    );
+    if (command === 'build' || !command) {
+        const themeIDs =
+            args.theme &&
+            (Array.isArray(args.theme) ? args.theme : [args.theme]);
 
-    cli.command(
-        'graph [theme]',
-        'Generate a dotviz graph for all AMD module dependencies in a theme',
-        y =>
-            y
-                .positional('theme', {
-                    type: 'string',
-                })
-                .required('theme'),
-        v => failOnReject(graph)(magentoRoot, v.theme),
-    );
-
-    const { argv } = cli;
-    if (argv.trace) enableTracing();
-    if (!argv._[0]) {
-        // default command when none is specified
-        failOnReject(build)(magentoRoot);
+        return await failOnReject(build)(magentoRoot, themeIDs);
     }
+
+    if (command === 'graph') {
+        const themeID = args.theme;
+        if (!themeID) {
+            errMsgAndExit('Must supply the ID of a theme with --theme.');
+        }
+        return await failOnReject(graph)(magentoRoot, themeID);
+    }
+
+    errMsgAndExit(`Unrecognized baler command: ${command}`);
+}
+
+function errMsgAndExit(message: string) {
+    console.error(chalk.red(message));
+    process.exit(1);
 }
 
 function failOnReject<T extends Function>(fn: T): T {
@@ -71,3 +65,21 @@ function failOnReject<T extends Function>(fn: T): T {
         return promise;
     } as any;
 }
+
+const helpMsg = chalk`Usage
+  {green $ baler <command> [options]}
+
+  {underline Commands}
+    build --theme Vendor/name
+    graph --theme Vendor/name
+
+  {underline Examples}
+    {gray Optimize all eligible themes}
+    $ baler build
+
+    {gray Optimize multiple themes}
+    $ baler build --theme Magento/foo --theme Magento/bar
+
+    {gray Generate Dependency Graph}
+    $ baler graph --theme Magento/luma
+`;

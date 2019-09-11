@@ -18,11 +18,13 @@ const getTraceFileStream = (() => {
     };
 })();
 
+const IS_TEST = process.env.NODE_ENV === 'test';
+
 /**
  * @summary Add a single event to the event trace log
  */
 export function trace(event: string) {
-    if (!tracingEnabled) return;
+    if (!tracingEnabled || IS_TEST) return;
 
     const timeFromProcessStart = performance.now();
     getTraceFileStream().write(`(${timeFromProcessStart}): ${event}\n`);

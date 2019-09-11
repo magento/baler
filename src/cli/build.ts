@@ -2,8 +2,10 @@ import { BalerError } from '../BalerError';
 import { collectStoreData } from '../collectStoreData';
 import { getEligibleThemes } from '../getEligibleThemes';
 import { optimizeThemes } from '../optimizeThemes';
+import { trace } from '../trace';
 
 export async function build(magentoRoot: string, themeIDs?: string[]) {
+    trace('starting build command from cli');
     const store = await collectStoreData(magentoRoot);
     const eligibleThemes = getEligibleThemes(store);
 
