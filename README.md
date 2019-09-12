@@ -16,15 +16,24 @@ If you're willing to test alpha software, [please proceed](docs/ALPHA.md)
 
 ## Usage
 
-**Note**: You must already have `baler` installed. See [`Development Setup`](#Development-Setup)
+```sh
+Usage
+  $ baler <command> [options]
 
-| Command                                                    | Result                                                              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| `baler`                                                    | Optimize all deployed themes                                        |
-| `baler build`                                              | Optimize all deployed themes                                        |
-| `baler build --theme Magento/luma`                         | Optimize a single deployed theme                                    |
-| `baler build --theme Magento/luma --theme MyVendor/custom` | Optimize multiple deployed themes                                   |
-| `baler graph Magento/luma`                                 | Generate a dotviz graph of all AMD dependencies in a deployed theme |
+  Commands
+    build --theme Vendor/name
+    graph --theme Vendor/name
+
+  Examples
+    Optimize all eligible themes
+    $ baler build
+
+    Optimize multiple themes
+    $ baler build --theme Magento/foo --theme Magento/bar
+
+    Generate Dependency Graph
+    $ baler graph --theme Magento/luma
+```
 
 ## Debugging
 
