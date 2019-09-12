@@ -9,7 +9,7 @@ import { BalerError } from './BalerError';
 const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
 
 /**
- * @summary Evaluates a Magento RequireJS config, which is
+ * @summary Reads and evaluates a Magento RequireJS config, which is
  *          a file containing `n` successive calls to `require.config`,
  *          wrapped in IIFEs. Various tricks are necessary to get all
  *          the pieces of the config that we need.
@@ -18,13 +18,21 @@ const requirejs = readFileSync(require.resolve('requirejs/require.js'), 'utf8');
  *          expensive. Do _not_ call in a loop. Instead, create
  *          1 resolver and re-use it
  */
-export function evaluate(rawConfig: string) {
+export async function getRequireConfigFromDir(path: string) {
+    const filepath = join(path, 'requirejs-config.js');
+    const rawRequireConfig = await readFile(filepath, 'utf8').catch(() => '');
+    if (!rawRequireConfig) {
+        throw new BalerError(
+            `Failed reading RequireJS config at path "${path}"`,
+        );
+    }
+
     try {
-        return evaluateRawConfig(rawConfig);
+        const requireConfig = evaluateRawConfig(rawRequireConfig);
+        return { rawRequireConfig, requireConfig };
     } catch (err) {
         throw new BalerError(
-            'Failed evaluating "requirejs-config.js"\n' +
-                `RequireJS Config Error: ${err.message}`,
+            `Failed evaluating RequireJS config at path "${path}".\nError: ${err}`,
         );
     }
 }
@@ -107,6 +115,8 @@ export function generateBundleRequireConfig(
     bundleID: string,
     bundledDeps: string[],
 ) {
+    // TODO: Deal with formatting of this JS better. See `requireConfig.unit.js`
+    // for an example of how bad the formatting currently looks
     return `(function() {
     // Injected by @magento/baler. This config
     // tells RequireJS which modules are in the
@@ -119,17 +129,4 @@ export function generateBundleRequireConfig(
     });
 })();
 ${rawConfig}`;
-}
-
-export async function getRequireConfigFromDir(path: string) {
-    const filepath = join(path, 'requirejs-config.js');
-    try {
-        const rawRequireConfig = await readFile(filepath, 'utf8');
-        const requireConfig = evaluateRawConfig(rawRequireConfig);
-        return { rawRequireConfig, requireConfig };
-    } catch {
-        throw new BalerError(
-            `Failed reading or evaluating RequireJS config at path "${path}"`,
-        );
-    }
 }

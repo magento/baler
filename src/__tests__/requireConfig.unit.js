@@ -1,79 +1,30 @@
 const {
-    evaluate,
     getMixinsForModule,
     getShimsForModule,
+    generateBundleRequireConfig,
+    getRequireConfigFromDir,
 } = require('../requireConfig');
-const { readFileSync } = require('fs');
+const { join } = require('path');
 
-const rawConfig = readFileSync(
-    require.resolve('./__fixtures__/luma-requirejs-config'),
-);
+const requireConfigDir = join(__dirname, '__fixtures__/luma-requirejs-config');
 
-test('evaluate does not throw on simple window property access', () => {
-    const config = `
-        (function(require) {
-            var foo = window.foo;
-        })(require);
-    `;
-    expect(() => evaluate(config)).not.toThrow();
-});
-
-test('evaluate captures all "deps" values', () => {
-    const config = evaluate(rawConfig);
-    expect(config.deps).toEqual([
-        'jquery/jquery.mobile.custom',
-        'mage/common',
-        'mage/dataPost',
-        'mage/bootstrap',
-        'jquery/jquery-migrate',
-        'jquery/jquery.cookie',
-        'mage/translate-inline',
-        'Magento_Theme/js/responsive',
-        'Magento_Theme/js/theme',
-    ]);
-});
-
-test('evaluate merges map* values from various configs', () => {
-    const config = evaluate(rawConfig);
-    const mapStar = config.map['*'];
-    expect(mapStar.rowBuilder).toEqual('Magento_Theme/js/row-builder');
-    expect(mapStar.ko).toEqual('knockoutjs/knockout');
-});
-
-test('evaluate merges paths values from various configs', () => {
-    const config = evaluate(rawConfig);
-    const { paths } = config;
-    expect(paths['jquery/ui']).toEqual('jquery/jquery-ui');
-    expect(paths['jquery/validate']).toEqual('jquery/jquery.validate');
-});
-
-test('evaluate merges mixins config values from various configs', () => {
-    const config = evaluate(rawConfig);
-    const { mixins } = config.config;
-
-    expect(mixins['Magento_Theme/js/view/breadcrumbs']).toEqual({
-        'Magento_Theme/js/view/add-home-breadcrumb': true,
-        'Magento_Catalog/js/product/breadcrumbs': true,
-    });
-});
-
-test('getMixinsForModule returns empty list when no mixins found', () => {
-    const mixins = getMixinsForModule(
-        'Magento_Theme/js/foo',
-        evaluate(rawConfig),
-    );
+test('getMixinsForModule returns empty list when no mixins found', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    const mixins = getMixinsForModule('Magento_Theme/js/foo', requireConfig);
     expect(mixins).toEqual([]);
 });
 
-test('getMixinsForModule finds single matching mixin', () => {
-    const mixins = getMixinsForModule('jquery/jquery-ui', evaluate(rawConfig));
+test('getMixinsForModule finds single matching mixin', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    const mixins = getMixinsForModule('jquery/jquery-ui', requireConfig);
     expect(mixins).toEqual(['jquery/patches/jquery-ui']);
 });
 
-test('getMixinsForModule finds multiple matching mixins', () => {
+test('getMixinsForModule finds multiple matching mixins', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
     const mixins = getMixinsForModule(
         'Magento_Theme/js/view/breadcrumbs',
-        evaluate(rawConfig),
+        requireConfig,
     );
     expect(mixins).toEqual([
         'Magento_Theme/js/view/add-home-breadcrumb',
@@ -131,4 +82,116 @@ test('getShimsForModule handles exports key and deps', () => {
         exports: 'foo',
         deps: ['a', 'b', 'c'],
     });
+});
+
+test('getRequireConfigFromDir throws descriptive error when config cannot be found', async () => {
+    expect.assertions(1);
+    try {
+        await getRequireConfigFromDir('/does/not/exist');
+    } catch (err) {
+        expect(err.message).toContain('Failed reading RequireJS config');
+    }
+});
+
+test('getRequireConfigFromDir throws descriptive error when config evaluation fails', async () => {
+    expect.hasAssertions();
+    const configDir = join(__dirname, '__fixtures__/invalid-requirejs-config');
+
+    try {
+        await getRequireConfigFromDir(configDir);
+    } catch (err) {
+        expect(err.message).toContain('Failed evaluating RequireJS config');
+        expect(err.message).toContain('window.fooPath');
+    }
+});
+
+test('getRequireConfigFromDir does not throw on simple window property access', async () => {
+    const configDir = join(
+        __dirname,
+        '__fixtures__/require-config-window-access',
+    );
+    await getRequireConfigFromDir(configDir);
+});
+
+test('evaluate captures all "deps" values', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    expect(requireConfig.deps).toEqual([
+        'jquery/jquery.mobile.custom',
+        'mage/common',
+        'mage/dataPost',
+        'mage/bootstrap',
+        'jquery/jquery-migrate',
+        'jquery/jquery.cookie',
+        'mage/translate-inline',
+        'Magento_Theme/js/responsive',
+        'Magento_Theme/js/theme',
+    ]);
+});
+
+test('evaluate merges map* values from various configs', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    const mapStar = requireConfig.map['*'];
+    expect(mapStar.rowBuilder).toEqual('Magento_Theme/js/row-builder');
+    expect(mapStar.ko).toEqual('knockoutjs/knockout');
+});
+
+test('evaluate merges paths values from various configs', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    const { paths } = requireConfig;
+    expect(paths['jquery/ui']).toEqual('jquery/jquery-ui');
+    expect(paths['jquery/validate']).toEqual('jquery/jquery.validate');
+});
+
+test('evaluate merges mixins config values from various configs', async () => {
+    const { requireConfig } = await getRequireConfigFromDir(requireConfigDir);
+    const { mixins } = requireConfig.config;
+
+    expect(mixins['Magento_Theme/js/view/breadcrumbs']).toEqual({
+        'Magento_Theme/js/view/add-home-breadcrumb': true,
+        'Magento_Catalog/js/product/breadcrumbs': true,
+    });
+});
+
+test('generateBundleRequireConfig appends bundles data to require config', () => {
+    const originalConfig = `
+        (function() {
+            require.config({
+                paths: {
+                    'foo': 'something/foo'
+                }
+            })
+        })();
+    `;
+    const newConfig = generateBundleRequireConfig(
+        originalConfig,
+        'core-bundle',
+        ['foo', 'bar', 'bizz'],
+    );
+
+    expect(newConfig).toMatchInlineSnapshot(`
+        "(function() {
+            // Injected by @magento/baler. This config
+            // tells RequireJS which modules are in the
+            // bundle, to prevent require from trying to
+            // load bundled modules from the network
+            require.config({
+                bundles: {
+                    'balerbundles/core-bundle': [
+          \\"foo\\",
+          \\"bar\\",
+          \\"bizz\\"
+        ]
+                }
+            });
+        })();
+
+                (function() {
+                    require.config({
+                        paths: {
+                            'foo': 'something/foo'
+                        }
+                    })
+                })();
+            "
+    `);
 });
