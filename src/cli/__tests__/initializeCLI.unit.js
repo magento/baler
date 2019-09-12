@@ -112,3 +112,29 @@ test('--help flushes help content to stdout', async () => {
     expect(logArg).toContain('Commands');
     expect(logArg).toContain('Usage');
 });
+
+test('graph command logs useful err and exits when theme is not specified', async () => {
+    jest.spyOn(process, 'exit').mockImplementation(noop);
+    jest.spyOn(console, 'error').mockImplementation(noop);
+
+    const magentoRoot = getFixturePath('minimal-magento-root');
+    const argv = ['/path/to/node', '/path/to/binary', 'graph'];
+    await startCLIRun(argv, magentoRoot);
+
+    const [errArg] = console.error.mock.calls[0];
+    expect(errArg).toContain('Must supply the ID of a theme with --theme');
+    expect(process.exit).toHaveBeenCalledWith(1);
+});
+
+test('logs error and exits when an unrecognized command is specified', async () => {
+    jest.spyOn(process, 'exit').mockImplementation(noop);
+    jest.spyOn(console, 'error').mockImplementation(noop);
+
+    const magentoRoot = getFixturePath('minimal-magento-root');
+    const argv = ['/path/to/node', '/path/to/binary', 'foobar'];
+    await startCLIRun(argv, magentoRoot);
+
+    const [errArg] = console.error.mock.calls[0];
+    expect(errArg).toContain('Unrecognized baler command');
+    expect(process.exit).toHaveBeenCalledWith(1);
+});
