@@ -11,7 +11,8 @@
     "build": "tsc",
     "test": "npm run format:check && jest -i",
     "format": "prettier --write $(head -1 prettier-globs)",
-    "format:check": "prettier --list-different $(head -1 prettier-globs)"
+    "format:check": "prettier --list-different $(head -1 prettier-globs)",
+    "coverage": "jest --coverage && open coverage/lcov-report/index.html"
   },
   "engines": {
     "node": ">=10.12.0"
