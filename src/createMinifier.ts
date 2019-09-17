@@ -14,7 +14,6 @@ export function createMinifier() {
     }) as unknown) as typeof minifyWorker & InstanceType<typeof Worker>;
 
     return {
-        minifyFromFilepath: worker.minifyFromFilepath,
         minifyFromString: worker.minifyFromString,
         destroy: worker.end.bind(worker),
     };

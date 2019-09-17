@@ -1,19 +1,5 @@
-const { join, basename } = require('path');
-const { copyFile } = require('../fsPromises');
-const { minifyFromFilepath, minifyFromString } = require('../minifyWorker');
-const { readFile } = require('../fsPromises');
-const tempy = require('tempy');
+const { minifyFromString } = require('../minifyWorker');
 const { SourceMapConsumer } = require('source-map');
-
-const moveFileToTmpDir = async path => {
-    const tmpDir = tempy.directory();
-    const filename = basename(path);
-    const tmpPath = join(tmpDir, filename);
-    await copyFile(path, tmpPath);
-    return { tmpPath, tmpDir };
-};
-const getFixturePath = (fixtureName, path) =>
-    join(__dirname, '__fixtures__', fixtureName, path);
 
 test('minifyFromString minifies JS file without chained sourcemap', async () => {
     const js = `
@@ -71,31 +57,4 @@ test('minifyFromString minifies JS file with chained sourcemap', async () => {
         };"
     `);
     consumer.destroy();
-});
-
-test('minifyFromFilepath minifies JS file', async () => {
-    const srcPath = getFixturePath('basic-minify', 'bundle.js');
-    const { tmpDir, tmpPath } = await moveFileToTmpDir(srcPath);
-
-    const result = await minifyFromFilepath(tmpPath);
-    const resultFilePath = join(tmpDir, result.minFilename);
-    const minifiedCode = await readFile(resultFilePath, 'utf8');
-
-    expect(minifiedCode).toMatchInlineSnapshot(
-        `"define([\\"a\\"],function(n){console.log(n)});"`,
-    );
-});
-
-test('minifyFromFilepath minifies JS file and chains sourcemap', async () => {
-    const srcPath = getFixturePath('source-mapped-minify', 'bundle.js');
-    const { tmpDir, tmpPath } = await moveFileToTmpDir(srcPath);
-
-    const result = await minifyFromFilepath(tmpPath);
-    const resultFilePath = join(tmpDir, result.minFilename);
-    const minifiedCode = await readFile(resultFilePath, 'utf8');
-
-    expect(minifiedCode).toMatchInlineSnapshot(
-        `"define([\\"a\\"],function(n){(0,console.log)(n)});"`,
-    );
-    // TODO: Assert that sourcemap was chained properly
 });
