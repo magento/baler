@@ -39,7 +39,42 @@ test('Require app with cycle', async () => {
     });
 });
 
-test.todo('Works with text! dependency on html file');
+test('Works with text! dependency on html file', async () => {
+    const appRoot = join(
+        __dirname,
+        '__fixtures__',
+        'html-dependency-from-main',
+    );
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
+    expect(results.graph).toEqual({
+        main: ['text!template.html', 'text'],
+        'text!template.html': [],
+        text: [],
+    });
+});
+
+test('Works with RequireJS built-ins', async () => {
+    const appRoot = join(__dirname, '__fixtures__', 'require-builtins');
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
+    expect(results.graph).toEqual({
+        main: ['exports', 'require', 'module'],
+    });
+});
+
+test('Gets lossy graph + warning when dependency cannot be found', async () => {
+    const appRoot = join(__dirname, '__fixtures__', 'missing-dep');
+    const results = await traceAMDDependencies(['main'], {}, appRoot);
+
+    expect(results.graph).toEqual({
+        main: ['foo'],
+        foo: [],
+    });
+
+    expect(results.warnings).toHaveLength(1);
+    const [warning] = results.warnings;
+    expect(warning.type).toBe('UnreadableDependencyWarning');
+    expect(warning.resolvedID).toBe('foo');
+    expect(warning.issuer).toBe('main');
+});
+
 test.todo('Throws descriptive error when file cannot be read');
-test.todo('Works with RequireJS built-ins (module, require, exports)');
-test.todo('RequireJS app with missing dependency works, but has warning');
