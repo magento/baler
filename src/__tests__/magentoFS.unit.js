@@ -49,6 +49,12 @@ test('getDeployedThemese', async () => {
     expect(deployedThemes).toEqual(['Magento/luma', 'Magento/backend']);
 });
 
+test('getEnabledModules throws descriptive warning when config.php cannot be found', async () => {
+    expect(
+        getEnabledModules('/some/magento/root/missing/config'),
+    ).rejects.toThrow(/Failed to read list of enabled modules from .+/);
+});
+
 test('Can parse config dumped with app:config:dump', async () => {
     const magentoRoot = join(
         __dirname,
