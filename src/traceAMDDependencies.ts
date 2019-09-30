@@ -30,30 +30,35 @@ export async function traceAMDDependencies(
     baseDir: string,
 ): Promise<TraceResult> {
     const resolver = createRequireResolver(requireConfig);
-    const toVisit: Set<string> = new Set();
+    const visitQueue: Set<string> = new Set();
     const moduleCache: Map<string, CacheEntry> = new Map();
     const graph: AMDGraph = {};
     const warnings: TraceResult['warnings'] = [];
 
-    const addDependencyToGraph = (
+    const queueDependency = (
         moduleID: string,
         modulePath: string,
         issuer: string,
     ) => {
-        if (graph.hasOwnProperty(moduleID)) return;
-        graph[moduleID] = [];
-
-        const path = join(baseDir, modulePath);
-        // We're only tracing AMD dependencies. Since a non-JS file
-        // can't have dependencies, we can skip the read and parse
-        if (extname(path) !== '.js') {
+        if (graph.hasOwnProperty(moduleID)) {
+            // If we've already seen this dependency, skip it
             return;
         }
 
-        toVisit.add(moduleID);
-        // the while loop processes things serially,
-        // but we kick off file reads as soon as possible
-        // so the file is ready when it's time to process
+        // Add empty entry to dependency graph
+        graph[moduleID] = [];
+
+        const path = join(baseDir, modulePath);
+        if (extname(path) !== '.js') {
+            // We're only tracing AMD dependencies. Since a non-JS file
+            // can't have dependencies, we can skip the read and parse
+            return;
+        }
+
+        visitQueue.add(moduleID);
+        // the while loop used for BFS in this module processes things serially,
+        // but we kick off file reads as soon as possible so the file is ready
+        // when it's time to process
         const read = quietAsyncRejectionWarning(readFile(path, 'utf8'));
         moduleCache.set(moduleID, {
             read,
@@ -63,18 +68,19 @@ export async function traceAMDDependencies(
     };
 
     const resolvedEntryIDs: string[] = [];
-    // Seed the visitors list with entry points
+    // Seed the visitors list with entry points to start
+    // the graph traversal with
     entryModuleIDs.forEach(entryID => {
         const resolved = resolver(entryID);
         resolvedEntryIDs.push(resolved.moduleID);
-        addDependencyToGraph(
+        queueDependency(
             resolved.moduleID,
             resolved.modulePath,
             '<entry point>',
         );
 
         if (resolved.pluginID) {
-            addDependencyToGraph(
+            queueDependency(
                 resolved.pluginID,
                 resolved.pluginPath,
                 resolved.moduleID,
@@ -83,16 +89,17 @@ export async function traceAMDDependencies(
     });
 
     // Breadth-first search of the graph
-    while (toVisit.size) {
-        const [moduleID] = toVisit;
-        toVisit.delete(moduleID);
+    while (visitQueue.size) {
+        const [moduleID] = visitQueue;
+        visitQueue.delete(moduleID);
         trace(`Preparing to analyze "${moduleID}" for dependencies`);
 
         const { read, path, issuer } = moduleCache.get(moduleID) as CacheEntry;
         const [err, source] = await wrapP(read);
         if (err) {
             // Missing files are treated as warnings, rather than hard errors, because
-            // a storefront is still usable (will just take a perf hit)
+            // a storefront is still usable (will just fall back to the network and
+            // take a perf hit)
             warnings.push(unreadableDependencyWarning(moduleID, path, issuer));
             trace(
                 `Warning for missing dependency "${moduleID}", which was required by "${issuer}"`,
@@ -103,10 +110,11 @@ export async function traceAMDDependencies(
         const { deps } = parseJavaScriptDeps(source as string);
         if (deps.length) {
             trace(
-                `Dependency request: "${moduleID}" needs: ${deps.join(', ')}`,
+                `Discovered dependencies for "${moduleID}": ${deps.join(', ')}`,
             );
         }
 
+        // TODO: test coverage for mixins
         const mixins = getMixinsForModule(moduleID, requireConfig).map(
             mixin => resolver(mixin).moduleID,
         );
@@ -114,7 +122,7 @@ export async function traceAMDDependencies(
         mixins.forEach(mixin => {
             const resolvedMixin = resolver(mixin);
             graph[moduleID].push(resolvedMixin.moduleID);
-            addDependencyToGraph(
+            queueDependency(
                 resolvedMixin.moduleID,
                 resolvedMixin.modulePath,
                 '<mixin>',
@@ -131,20 +139,16 @@ export async function traceAMDDependencies(
             }
 
             const result = resolver(dep, moduleID);
-            // It's possible for a dependency to be a plugin without an argument.
-            // Example: "domReady!"
+            // It's possible for a dependency to be a plugin without an associated
+            // resource. Example: "domReady!"
             if (result.moduleID) {
                 graph[moduleID].push(result.moduleID);
-                addDependencyToGraph(
-                    result.moduleID,
-                    result.modulePath,
-                    moduleID,
-                );
+                queueDependency(result.moduleID, result.modulePath, moduleID);
             }
 
             if (result.pluginID) {
                 graph[moduleID].push(result.pluginID);
-                addDependencyToGraph(
+                queueDependency(
                     result.pluginID,
                     result.pluginPath,
                     result.moduleID,
