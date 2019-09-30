@@ -13,6 +13,7 @@ test('Simple Require app with no config and no cycles', async () => {
         foo: ['bar'],
         bar: [],
     });
+    expect(results.warnings).toHaveLength(0);
 });
 
 test('Require app with relative import', async () => {
@@ -27,6 +28,7 @@ test('Require app with relative import', async () => {
         'dir/foo': ['dir/bar'],
         'dir/bar': [],
     });
+    expect(results.warnings).toHaveLength(0);
 });
 
 test('Require app with cycle', async () => {
@@ -37,6 +39,7 @@ test('Require app with cycle', async () => {
         foo: ['bar'],
         bar: ['foo'],
     });
+    expect(results.warnings).toHaveLength(0);
 });
 
 test('Works with text! dependency on html file', async () => {
@@ -51,6 +54,7 @@ test('Works with text! dependency on html file', async () => {
         'text!template.html': [],
         text: [],
     });
+    expect(results.warnings).toHaveLength(0);
 });
 
 test('Works with RequireJS built-ins', async () => {
@@ -59,6 +63,7 @@ test('Works with RequireJS built-ins', async () => {
     expect(results.graph).toEqual({
         main: ['exports', 'require', 'module'],
     });
+    expect(results.warnings).toHaveLength(0);
 });
 
 test('Gets lossy graph + warning when dependency cannot be found', async () => {
@@ -77,4 +82,36 @@ test('Gets lossy graph + warning when dependency cannot be found', async () => {
     expect(warning.issuer).toBe('main');
 });
 
-test.todo('Throws descriptive error when file cannot be read');
+// Note: This is not necessarily the desired behavior - an early error for an entry point would
+// be ideal. However, the test now is just to track current behavior
+test('A missing entry point yields an incomplete graph with that entry + a warning', async () => {
+    const results = await traceAMDDependencies(['main'], {}, '/some/fake/path');
+    expect(results.graph).toEqual({
+        main: [],
+    });
+    expect(results.warnings).toHaveLength(1);
+});
+
+test('Works with mixin config', async () => {
+    const appRoot = join(__dirname, '__fixtures__', 'require-app-with-mixin');
+    const requireConfig = {
+        config: {
+            mixins: {
+                foo: {
+                    'foo-mixin': true,
+                },
+            },
+        },
+    };
+    const results = await traceAMDDependencies(
+        ['main'],
+        requireConfig,
+        appRoot,
+    );
+    expect(results.graph).toEqual({
+        main: ['foo'],
+        foo: ['foo-mixin', 'module'],
+        'foo-mixin': ['require'],
+    });
+    expect(results.warnings).toHaveLength(0);
+});
