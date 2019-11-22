@@ -28,7 +28,7 @@ Run `npm link` in the `baler` directory, which will add the `baler` binary to yo
 
 ## Install and configure the `Magento_Baler` module
 
--   [`Magento_Baler` repository](https://github.com/adifucan/m2-baler)
+-   [`Magento_Baler` repository](https://github.com/magento/m2-baler)
 
 After the module is installed, run `bin/magento config:set dev/js/enable_baler_js_bundling 1` to enable loading of `baler` assets.
 
