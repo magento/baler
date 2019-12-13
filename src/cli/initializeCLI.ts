@@ -19,7 +19,15 @@ export async function initializeCLI(argv: string[], cwd: string) {
 
     const magentoRoot = await findMagentoRoot(cwd);
     if (!magentoRoot) {
-        errMsgAndExit(`Could not find Magento store root from "${cwd}"`);
+        errMsgAndExit(
+            `Could not find required data from Magento store at "${cwd}". ` +
+                'To bundle your themes, baler needs to run from a directory ' +
+                'with access to the following locations:\n' +
+                '- app/code\n' +
+                '- app/etc/config.php\n' +
+                '- pub/static' +
+                '- vendor\n',
+        );
         return;
     }
 

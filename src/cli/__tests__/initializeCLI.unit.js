@@ -22,7 +22,7 @@ test('Logs useful error to stderr and exits process when magento root cannot be 
 
     const [consoleErrArgs] = console.error.mock.calls;
     expect(consoleErrArgs.join('')).toContain(
-        'Could not find Magento store root from',
+        'Could not find required data from Magento store at',
     );
     expect(process.exit).toHaveBeenCalledWith(1);
 });

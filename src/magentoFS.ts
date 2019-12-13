@@ -11,12 +11,13 @@ import { BalerError } from './BalerError';
 import { trace } from './trace';
 
 /**
- * @summary Hacky but functional validation that a directory is the
- *          root of a Magento 2 installation
+ * @summary Verify all the dirs we need from Magento are available.
+ *          Things to be checked should be kept to the essentials
+ *          (see: https://github.com/magento/baler/issues/30)
  */
 export async function findMagentoRoot(dir: string) {
     trace(`looking for magento root starting at ${dir}`);
-    const EXPECTED_ENTRIES = ['app', 'vendor', 'index.php', 'lib'];
+    const EXPECTED_ENTRIES = ['app', 'vendor', 'pub'];
     const predicate = (dir: string, entries: string[]) => {
         return EXPECTED_ENTRIES.every(e => entries.includes(e));
     };
