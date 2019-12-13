@@ -36,9 +36,11 @@ After the module is installed, run `bin/magento config:set dev/js/enable_baler_j
 
 Run the following commands to disable incompatible features in your store:
 
--   `bin/magento config:set dev/js/minify_files 0`
--   `bin/magento config:set dev/js/enable_js_bundling 0`
--   `bin/magento config:set dev/js/merge_files 0`
+```
+bin/magento config:set dev/js/minify_files 0
+bin/magento config:set dev/js/enable_js_bundling 0
+bin/magento config:set dev/js/merge_files 0
+```
 
 ## Fix some things in Magento core
 
