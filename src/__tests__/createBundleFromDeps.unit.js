@@ -41,6 +41,24 @@ test('html file loaded with text plugin gets wrapped as text module', async () =
     expect(results.bundle).toMatchSnapshot();
 });
 
+test('non-html file loaded with text plugin gets wrapped as text module', async () => {
+    stubFilePaths({
+        'root/js-translation.json': '{"hello": "world" }',
+    });
+    stubDateISOString();
+    const { createBundleFromDeps } = getModuleUnderTest();
+
+    const results = await createBundleFromDeps(
+        'core-bundle',
+        ['text!js-translation.json'],
+        'root',
+        {},
+        'Vendor/theme',
+    );
+
+    expect(results.bundle).toMatchSnapshot();
+});
+
 test('named AMD module keeps its name', async () => {
     stubFilePaths({
         'root/main.js': `
