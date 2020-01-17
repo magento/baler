@@ -55,15 +55,16 @@ async function getFinalModuleSource(
     resolver: ReturnType<typeof createRequireResolver>,
     requireConfig: MagentoRequireConfig,
 ) {
-    const path = join(baseDir, resolver(dep).modulePath);
+    const resolvedDep = resolver(dep);
+    const path = join(baseDir, resolvedDep.modulePath);
     const source = await readFile(path, 'utf8');
-    const isHTML = extname(path) === '.html';
+    const isText = resolvedDep.pluginID === 'text';
     const shims = getShimsForModule(dep, requireConfig);
     const hasDefine = isAMDWithDefine(source);
     const isNamed = isNamedAMD(source);
     const hasInvalidShim = hasDefine && !!shims;
 
-    if (isHTML) {
+    if (isText) {
         return { dep, file: wrapTextModule(dep, source), hasInvalidShim };
     }
 
