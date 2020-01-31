@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { findMagentoRoot } from '../magentoFS';
 import { trace, enableTracing } from '../trace';
 import { build } from './build';

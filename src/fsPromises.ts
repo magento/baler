@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 // node.js already has a promise-based API for all async fs operations
 // that is available via require('fs').promises. However, in node.js 10.x
 // (LTS version at the time of writing) a really ugly "Experimental Feature"

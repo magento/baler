@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { join, parse } from 'path';
 import { readdir } from './fsPromises';
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { join } = require('path');
 
 const getFixturePath = rel => join(__dirname, '__fixtures__', rel);

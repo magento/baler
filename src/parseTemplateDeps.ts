@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { Parser as HTMLParser } from 'htmlparser2';
 import { ObjectExpression } from 'estree';
 import { parseJavaScriptDeps } from './parseJavaScriptDeps';

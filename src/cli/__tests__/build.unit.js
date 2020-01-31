@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 // build.ts imports the `collectStoreData` module before our `jest.mock`
 // calls for it. To work-around this, we'll get a fresh
 // copy of the module for each test _after_ our mock has been installed

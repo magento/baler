@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { trace } from './trace';
 /**
  * @summary Separate a RequireJS module ID from associated plugin

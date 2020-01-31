@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 /**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
+/**
  * Note: This file should remain ES5 only, and should not use any
  * node APIs not found in 0.x releases. Lots of Magento users
  * are not regular users of node, and might have extremely old versions

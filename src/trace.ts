@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { join } from 'path';
 import { performance } from 'perf_hooks';
 import { createWriteStream, WriteStream } from 'fs';

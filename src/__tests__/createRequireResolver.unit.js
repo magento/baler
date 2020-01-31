@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { createRequireResolver } = require('../createRequireResolver');
 
 test('Resolves a bare module identifier without a path mapped from map["*"]', () => {

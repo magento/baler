@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { getEligibleThemes } = require('../getEligibleThemes');
 
 test('0 themes when no deployed themes exist', () => {

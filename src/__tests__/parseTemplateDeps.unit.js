@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { parseTemplateDeps } = require('../parseTemplateDeps');
 
 test('script in phtml with inline php values', () => {

@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { generateDotGraph } = require('../generateDotGraph');
 
 test('Works on simple graph', () => {

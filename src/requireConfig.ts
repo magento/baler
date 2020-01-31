@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import vm from 'vm';
 import { join } from 'path';
 import { trace } from './trace';
