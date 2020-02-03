@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { readFile, readdir } from './fsPromises';
 import { join } from 'path';
 import glob from 'fast-glob';

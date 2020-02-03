@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import { StoreData, Theme, MagentoRequireConfig } from './types';
 import { join, dirname } from 'path';
 import { createMinifier, Minifier } from './createMinifier';

@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import execa from 'execa';
 import { ComponentPaths } from './types';
 import { BalerError } from './BalerError';

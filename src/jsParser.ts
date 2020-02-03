@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import * as acorn from 'acorn';
 import * as acornLoose from 'acorn-loose';
 import { Program, ObjectExpression } from 'estree';

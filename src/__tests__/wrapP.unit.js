@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { wrapP } = require('../wrapP');
 
 test('Reject', async () => {

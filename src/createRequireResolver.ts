@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import vm from 'vm';
 import { trace } from './trace';
 import { MagentoRequireConfig } from './types';

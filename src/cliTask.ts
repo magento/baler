@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import ora from 'ora';
 import chalk from 'chalk';
 import prettyMS from 'pretty-ms';

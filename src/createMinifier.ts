@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 import Worker from 'jest-worker';
 import * as minifyWorker from './minifyWorker';
 import { trace } from './trace';

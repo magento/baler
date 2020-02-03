@@ -1,3 +1,8 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
 const { parse, parseObjectExpression } = require('../jsParser');
 
 test('parse works with basic code', () => {
