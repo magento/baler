@@ -4,6 +4,12 @@ While `baler` is still heavily under development, the setup process is not quite
 
 Please make sure to follow all steps in the order they're documented below.
 
+## Verify PHP is installed
+
+`baler` needs to run PHP and load classes from Magento, so make sure PHP is setup correctly for use with Magento. See the [Magento documentation](https://devdocs.magento.com/guides/v2.3/install-gde/system-requirements-tech.html#php) for more details.
+
+Verify you either have `php` available in your `$PATH`, or set the `$BALER_PHP_PATH` environment variable to point to the binary.
+
 ## Get node.js
 
 You will need a version of `node.js` that is >= `10.12.0`. You can check if this is already available from the command line via `node -v`.
