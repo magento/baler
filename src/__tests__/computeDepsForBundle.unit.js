@@ -55,3 +55,12 @@ test('Graph with 2 entry points and a cycle in first entry point', () => {
     const entries = ['a', 'c'];
     expect(computeDepsForBundle(graph, entries)).toEqual(['a', 'b', 'c']);
 });
+
+test('Excluded file js-translation.json not file in computed dep list', () => {
+    const graph = {
+        a: ['b'],
+        b: ['text!js-translation.json'],
+    };
+    const entries = ['a'];
+    expect(computeDepsForBundle(graph, entries)).toEqual(['a', 'b']);
+});
