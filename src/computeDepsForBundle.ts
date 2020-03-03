@@ -4,7 +4,7 @@
  */
 
 import { AMDGraph } from './types';
-import { REQUIRE_BUILT_INS } from './requireBuiltIns';
+import { depIsIgnored } from './depIsIgnored';
 
 /**
  * @summary Given an ordered list of entry points and a graph,
@@ -19,8 +19,9 @@ export function computeDepsForBundle(graph: AMDGraph, entryPoints: string[]) {
 
     while (toVisit.length) {
         const dep = toVisit.shift() as string;
+
         // Break cycle
-        if (depsToBundle.has(dep) || REQUIRE_BUILT_INS.includes(dep)) {
+        if (depsToBundle.has(dep) || depIsIgnored(dep)) {
             continue;
         }
 
