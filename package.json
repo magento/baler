@@ -48,7 +48,7 @@
     "typescript": "^3.5.3"
   },
   "dependencies": {
-    "acorn": "^6.2.1",
+    "acorn": "^6.4.1",
     "acorn-loose": "^6.1.0",
     "chalk": "^2.4.2",
     "console-log-level": "^1.4.1",
