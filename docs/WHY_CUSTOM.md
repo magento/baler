@@ -124,4 +124,4 @@ Various options exist.
 1. Hand-rolling configuration for the [RequireJS optimizer](https://requirejs.org/docs/optimization.html) (similar to Advanced Bundling docs)
 2. Using [`WeareJH/config-gen`](https://github.com/WeareJH/config-gen) to generate a config for the RequireJS optimizer
 3. Using [`magento/m2-devtools`](https://github.com/magento/m2-devtools) to generate a config for the RequireJS optimizer
-4. Using [`magesuite/magepack`](https://github.com/magesuite/magepack) to generate a config for the RequireJS optimizer
+4. Using [`magesuite/magepack`](https://github.com/magesuite/magepack)
